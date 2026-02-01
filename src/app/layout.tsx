@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Our journey together ❤️",
 };
 
+import { MapProvider } from "@/components/providers/map-provider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <MapProvider>
+          {children}
+        </MapProvider>
       </body>
     </html>
   );
