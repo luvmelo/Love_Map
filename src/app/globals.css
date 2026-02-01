@@ -11,8 +11,9 @@
   .glass {
     @apply backdrop-blur-xl bg-white/70 dark:bg-black/60 border border-white/20 dark:border-white/10 shadow-lg;
   }
+
   .glass-card {
-    @apply glass rounded-2xl;
+    @apply backdrop-blur-xl bg-white/70 dark:bg-black/60 border border-white/20 dark:border-white/10 shadow-lg rounded-2xl;
   }
 }
 
