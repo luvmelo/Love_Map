@@ -4,18 +4,26 @@ import { Map, MapMouseEvent } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
 import { SearchBox } from './search-box';
 import { AddMemoryModal } from './add-memory-modal';
+import { MemoryMarkers, Memory } from './memory-markers';
 import { MemorySidebar } from '../ui/memory-sidebar';
-import { Menu, Home, Plus, User } from 'lucide-react';
+import { Menu, Home, Plus } from 'lucide-react';
 
-const DEFAULT_CENTER = { lat: 37.7749, lng: -122.4194 }; // San Francisco
-const DEFAULT_ZOOM = 12;
+const DEFAULT_CENTER = { lat: 35.6762, lng: 139.6503 }; // Tokyo
+
+// Sample memories with coordinates for demo - clustered in Tokyo area
+const SAMPLE_MEMORIES: Memory[] = [
+    { id: '1', name: 'Tokyo Tower', type: 'travel', date: '2024-03-14', memo: 'Our first trip together ❤️', lat: 35.6586, lng: 139.7454 },
+    { id: '2', name: 'Sushi Zen', type: 'food', date: '2024-03-15', memo: 'Best omakase ever!', lat: 35.6595, lng: 139.7292 },
+    { id: '3', name: 'Shibuya Crossing', type: 'adventure', date: '2024-03-16', memo: 'Got lost but found each other', lat: 35.6595, lng: 139.7004 },
+    { id: '4', name: 'Meiji Shrine', type: 'love', date: '2024-03-17', memo: 'Made a wish together 🙏', lat: 35.6764, lng: 139.6993 },
+];
 
 export default function LoveMap() {
-    const [center, setCenter] = useState(DEFAULT_CENTER);
     const [isAddMode, setIsAddMode] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string } | null>(null);
     const [lastSearchedPlace, setLastSearchedPlace] = useState<google.maps.places.PlaceResult | null>(null);
+    const [memories] = useState<Memory[]>(SAMPLE_MEMORIES);
 
     const handleMapClick = (event: MapMouseEvent) => {
         if (isAddMode && event.detail.latLng) {
@@ -27,36 +35,29 @@ export default function LoveMap() {
     };
 
     return (
-        <div className="relative w-full h-screen bg-[#0a0a1a] overflow-hidden">
-            {/* Space Background - Stars */}
-            <div className="absolute inset-0 z-0 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a1a] via-[#1a1a3a] to-[#0a0a1a]" />
-                {/* Animated stars layer */}
-                <div className="stars-layer absolute inset-0 opacity-60" />
-            </div>
-
+        <div className="relative w-full h-screen bg-black overflow-hidden">
             <Map
                 defaultCenter={DEFAULT_CENTER}
-                defaultZoom={2.5}
+                defaultZoom={3}
+                minZoom={2}
                 defaultTilt={0}
                 defaultHeading={0}
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
                 mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
                 renderingType="VECTOR"
-                className="w-full h-full relative z-10"
+                className="w-full h-full"
                 onClick={handleMapClick}
-                minZoom={2} // Prevent zooming out too far (avoids tile repeat)
-                restriction={{
-                    latLngBounds: {
-                        north: 85,
-                        south: -85,
-                        west: -180,
-                        east: 180,
-                    },
-                    strictBounds: true,
-                }}
-            />
+            >
+                {/* Memory markers with clustering */}
+                <MemoryMarkers
+                    memories={memories}
+                    onMemoryClick={(memory) => {
+                        console.log("Clicked memory:", memory);
+                        // TODO: Show memory detail modal
+                    }}
+                />
+            </Map>
 
             {/* Glass Overlay: Top Search Bar */}
             <SearchBox onPlaceSelect={(place) => setLastSearchedPlace(place)} />
@@ -103,13 +104,11 @@ export default function LoveMap() {
 
                     {/* Home Button */}
                     <button
-                        onClick={() => {
-                            // Reset to globe view
-                        }}
                         className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                     >
                         <Home size={20} />
                     </button>
+
 
                     {/* Add Memory Button (Primary) */}
                     <button
@@ -140,4 +139,3 @@ export default function LoveMap() {
         </div>
     );
 }
-

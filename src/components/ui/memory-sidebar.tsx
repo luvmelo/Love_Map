@@ -48,7 +48,15 @@ export function MemorySidebar({ isOpen, onClose, onMemoryClick }: MemorySidebarP
                 {/* Header */}
                 <div className="p-5 border-b border-white/10">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold text-gradient">Our Journey</h2>
+                        <h2
+                            className="text-lg font-bold"
+                            style={{
+                                background: 'linear-gradient(135deg, #e11d48 0%, #f43f5e 50%, #fb7185 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                            }}
+                        >Our Journey</h2>
                         <button
                             onClick={onClose}
                             className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 transition-colors"
@@ -89,8 +97,8 @@ export function MemorySidebar({ isOpen, onClose, onMemoryClick }: MemorySidebarP
                                     key={key}
                                     onClick={() => setActiveFilter(isActive ? null : key)}
                                     className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all ${isActive
-                                            ? `${config.bg} ${config.color} ring-1 ring-current`
-                                            : 'bg-black/5 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'
+                                        ? `${config.bg} ${config.color} ring-1 ring-current`
+                                        : 'bg-black/5 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'
                                         }`}
                                 >
                                     <Icon size={12} className={isActive ? 'fill-current' : ''} />

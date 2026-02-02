@@ -196,9 +196,9 @@ a[href^="https://maps.google.com/maps"] {
    UTILITY CLASSES
    ============================================ */
 
-/* Text gradient for headers */
+/* Text gradient for headers - Warm rose-gold, romantic gradient */
 .text-gradient {
-    background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 50%, #3b82f6 100%);
+    background: linear-gradient(135deg, #e11d48 0%, #f43f5e 50%, #fb7185 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
