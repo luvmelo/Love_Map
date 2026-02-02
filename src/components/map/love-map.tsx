@@ -4,28 +4,49 @@ import { Map, MapMouseEvent } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
 import { SearchBox } from './search-box';
 import { AddMemoryModal } from './add-memory-modal';
-import { MemoryMarkers, Memory } from './memory-markers';
+import { MemoryMarkers, Memory, User } from './memory-markers';
 import { MemorySidebar } from '../ui/memory-sidebar';
-import { Menu, Home, Plus } from 'lucide-react';
+import { useUser, USERS } from '../../contexts/user-context';
+import { Menu, Home, Plus, Users } from 'lucide-react';
 
 const DEFAULT_CENTER = { lat: 35.6762, lng: 139.6503 }; // Tokyo
 
-// Sample memories with coordinates for demo - clustered in Tokyo area
+// Sample memories with coordinates for demo - with user assignments
 const SAMPLE_MEMORIES: Memory[] = [
-    { id: '1', name: 'Tokyo Tower', type: 'travel', date: '2024-03-14', memo: 'Our first trip together ❤️', lat: 35.6586, lng: 139.7454 },
-    { id: '2', name: 'Sushi Zen', type: 'food', date: '2024-03-15', memo: 'Best omakase ever!', lat: 35.6595, lng: 139.7292 },
-    { id: '3', name: 'Shibuya Crossing', type: 'adventure', date: '2024-03-16', memo: 'Got lost but found each other', lat: 35.6595, lng: 139.7004 },
-    { id: '4', name: 'Meiji Shrine', type: 'love', date: '2024-03-17', memo: 'Made a wish together 🙏', lat: 35.6764, lng: 139.6993 },
+    { id: '1', name: 'Tokyo Tower', type: 'travel', date: '2024-03-14', memo: 'Our first trip together ❤️', lat: 35.6586, lng: 139.7454, addedBy: 'melo' },
+    { id: '2', name: 'Sushi Zen', type: 'food', date: '2024-03-15', memo: 'Best omakase ever!', lat: 35.6595, lng: 139.7292, addedBy: 'may' },
+    { id: '3', name: 'Shibuya Crossing', type: 'adventure', date: '2024-03-16', memo: 'Got lost but found each other', lat: 35.6595, lng: 139.7004, addedBy: 'melo' },
+    { id: '4', name: 'Meiji Shrine', type: 'love', date: '2024-03-17', memo: 'Made a wish together 🙏', lat: 35.6764, lng: 139.6993, addedBy: 'may' },
 ];
 
+// Map boundary restriction to prevent gray areas
+const MAP_RESTRICTION = {
+    latLngBounds: {
+        north: 85,
+        south: -85,
+        west: -180,
+        east: 180,
+    },
+    strictBounds: true,
+};
+
 export default function LoveMap() {
+    const { currentUser, userInfo, switchUser, otherUser } = useUser();
     const [isAddMode, setIsAddMode] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string } | null>(null);
     const [lastSearchedPlace, setLastSearchedPlace] = useState<google.maps.places.PlaceResult | null>(null);
     const [memories] = useState<Memory[]>(SAMPLE_MEMORIES);
+    const [userFilter, setUserFilter] = useState<User | null>(null);
 
     const handleMapClick = (event: MapMouseEvent) => {
+        // Close user menu if open
+        if (isUserMenuOpen) {
+            setIsUserMenuOpen(false);
+            return;
+        }
+
         if (isAddMode && event.detail.latLng) {
             const lat = event.detail.latLng.lat;
             const lng = event.detail.latLng.lng;
@@ -39,7 +60,8 @@ export default function LoveMap() {
             <Map
                 defaultCenter={DEFAULT_CENTER}
                 defaultZoom={3}
-                minZoom={2}
+                minZoom={3}  // Increased to prevent gray areas
+                maxZoom={20}
                 defaultTilt={0}
                 defaultHeading={0}
                 gestureHandling={'greedy'}
@@ -48,10 +70,12 @@ export default function LoveMap() {
                 renderingType="VECTOR"
                 className="w-full h-full"
                 onClick={handleMapClick}
+                restriction={MAP_RESTRICTION}
             >
                 {/* Memory markers with clustering */}
                 <MemoryMarkers
                     memories={memories}
+                    filterByUser={userFilter}
                     onMemoryClick={(memory) => {
                         console.log("Clicked memory:", memory);
                         // TODO: Show memory detail modal
@@ -66,6 +90,9 @@ export default function LoveMap() {
             <MemorySidebar
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
+                memories={memories}
+                userFilter={userFilter}
+                onUserFilterChange={setUserFilter}
                 onMemoryClick={(memory) => {
                     console.log("Navigate to memory:", memory);
                     // TODO: Fly to memory location
@@ -80,7 +107,7 @@ export default function LoveMap() {
                     placeName={tempMarker.name}
                     onClose={() => setTempMarker(null)}
                     onSave={(data) => {
-                        console.log("Saving memory:", data);
+                        console.log("Saving memory:", { ...data, addedBy: currentUser });
                         setTempMarker(null);
                         setIsAddMode(false);
                         setLastSearchedPlace(null);
@@ -121,18 +148,59 @@ export default function LoveMap() {
                         <Plus size={28} />
                     </button>
 
-                    {/* Profile Button */}
-                    <button className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-300 to-blue-300 border-2 border-white shadow-sm overflow-hidden">
-                        {/* Could show user avatar here */}
-                    </button>
+                    {/* User Switcher Button */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                            className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm overflow-hidden transition-transform hover:scale-105"
+                            style={{
+                                background: `linear-gradient(135deg, ${USERS.melo.color}, ${USERS.may.color})`,
+                                border: `2px solid ${userInfo.color}`,
+                            }}
+                        >
+                            <span className="text-lg">{userInfo.avatar}</span>
+                        </button>
+
+                        {/* User Menu Dropdown */}
+                        {isUserMenuOpen && (
+                            <div className="absolute bottom-14 right-0 glass-card p-2 min-w-[140px] animate-slide-up">
+                                <div className="text-xs text-gray-500 px-2 mb-1">Switch user</div>
+                                {(['melo', 'may'] as User[]).map((user) => (
+                                    <button
+                                        key={user}
+                                        onClick={() => {
+                                            switchUser(user);
+                                            setIsUserMenuOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${currentUser === user
+                                            ? 'bg-black/10 dark:bg-white/10'
+                                            : 'hover:bg-black/5 dark:hover:bg-white/5'
+                                            }`}
+                                    >
+                                        <span
+                                            className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
+                                            style={{ background: USERS[user].color + '20', color: USERS[user].color }}
+                                        >
+                                            {USERS[user].avatar}
+                                        </span>
+                                        <span className="text-sm font-medium">{USERS[user].name}</span>
+                                        {currentUser === user && (
+                                            <span className="ml-auto text-xs text-gray-400">✓</span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
             {/* Mode Indicator */}
             {isAddMode && (
                 <div className="absolute top-24 left-0 right-0 flex justify-center pointer-events-none">
-                    <div className="glass px-4 py-2 rounded-full text-sm font-medium text-blue-600 animate-fade-in">
-                        Tap anywhere to drop a pin 📍
+                    <div className="glass px-4 py-2 rounded-full text-sm font-medium text-blue-600 animate-fade-in flex items-center gap-2">
+                        <span style={{ color: userInfo.color }}>{userInfo.avatar}</span>
+                        <span>Tap anywhere to drop a pin 📍</span>
                     </div>
                 </div>
             )}

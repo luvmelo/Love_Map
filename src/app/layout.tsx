@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 import { MapProvider } from "@/components/providers/map-provider";
+import { UserProvider } from "@/contexts/user-context";
 
 export default function RootLayout({
   children,
@@ -31,9 +32,12 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <MapProvider>
-          {children}
+          <UserProvider>
+            {children}
+          </UserProvider>
         </MapProvider>
       </body>
     </html>
   );
 }
+

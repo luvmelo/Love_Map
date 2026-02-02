@@ -1,15 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart, Utensils, Plane, Mountain, X, Calendar, MapPin, Filter, ChevronRight } from 'lucide-react';
-
-// Mock data for demo - will be replaced with Supabase
-const MOCK_MEMORIES = [
-    { id: '1', name: 'Tokyo Tower', type: 'travel', date: '2024-03-15', memo: 'Our first trip together ❤️' },
-    { id: '2', name: 'Sushi Zen', type: 'food', date: '2024-03-16', memo: 'Best omakase ever!' },
-    { id: '3', name: 'Shibuya Crossing', type: 'adventure', date: '2024-03-17', memo: 'Got lost but found each other' },
-    { id: '4', name: 'Meiji Shrine', type: 'love', date: '2024-03-18', memo: 'Made a wish together 🙏' },
-];
+import { Heart, Utensils, Plane, Mountain, X, Calendar, MapPin, Filter, ChevronRight, Users } from 'lucide-react';
+import { Memory, User } from '../map/memory-markers';
+import { USERS } from '../../contexts/user-context';
 
 const FLAG_CONFIG = {
     love: { icon: Heart, color: 'text-pink-500', bg: 'bg-pink-500/10', label: 'Love' },
@@ -21,19 +15,32 @@ const FLAG_CONFIG = {
 interface MemorySidebarProps {
     isOpen: boolean;
     onClose: () => void;
-    onMemoryClick?: (memory: typeof MOCK_MEMORIES[0]) => void;
+    memories: Memory[];
+    userFilter: User | null;
+    onUserFilterChange: (user: User | null) => void;
+    onMemoryClick?: (memory: Memory) => void;
 }
 
-export function MemorySidebar({ isOpen, onClose, onMemoryClick }: MemorySidebarProps) {
-    const [activeFilter, setActiveFilter] = useState<string | null>(null);
+export function MemorySidebar({
+    isOpen,
+    onClose,
+    memories,
+    userFilter,
+    onUserFilterChange,
+    onMemoryClick
+}: MemorySidebarProps) {
+    const [activeTypeFilter, setActiveTypeFilter] = useState<string | null>(null);
 
-    const filteredMemories = activeFilter
-        ? MOCK_MEMORIES.filter(m => m.type === activeFilter)
-        : MOCK_MEMORIES;
+    // Apply both type and user filters
+    const filteredMemories = memories.filter(m => {
+        const matchesType = !activeTypeFilter || m.type === activeTypeFilter;
+        const matchesUser = !userFilter || m.addedBy === userFilter;
+        return matchesType && matchesUser;
+    });
 
     // Stats
     const stats = {
-        total: MOCK_MEMORIES.length,
+        total: filteredMemories.length,
         countries: 1, // Would calculate from real data
         cities: 1,
     };
@@ -82,7 +89,46 @@ export function MemorySidebar({ isOpen, onClose, onMemoryClick }: MemorySidebarP
                     </div>
                 </div>
 
-                {/* Filter Pills */}
+                {/* User Filter Pills */}
+                <div className="px-5 py-3 border-b border-white/10">
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                        <Users size={12} />
+                        <span>Filter by person</span>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => onUserFilterChange(null)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${userFilter === null
+                                    ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-800'
+                                    : 'bg-black/5 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'
+                                }`}
+                        >
+                            All
+                        </button>
+                        {(['melo', 'may'] as User[]).map((user) => {
+                            const isActive = userFilter === user;
+                            return (
+                                <button
+                                    key={user}
+                                    onClick={() => onUserFilterChange(isActive ? null : user)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all ${isActive
+                                            ? 'ring-1 ring-current'
+                                            : 'bg-black/5 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'
+                                        }`}
+                                    style={isActive ? {
+                                        background: USERS[user].color + '15',
+                                        color: USERS[user].color
+                                    } : {}}
+                                >
+                                    <span>{USERS[user].avatar}</span>
+                                    {USERS[user].name}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Type Filter Pills */}
                 <div className="px-5 py-3 border-b border-white/10">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                         <Filter size={12} />
@@ -91,11 +137,11 @@ export function MemorySidebar({ isOpen, onClose, onMemoryClick }: MemorySidebarP
                     <div className="flex gap-2 flex-wrap">
                         {Object.entries(FLAG_CONFIG).map(([key, config]) => {
                             const Icon = config.icon;
-                            const isActive = activeFilter === key;
+                            const isActive = activeTypeFilter === key;
                             return (
                                 <button
                                     key={key}
-                                    onClick={() => setActiveFilter(isActive ? null : key)}
+                                    onClick={() => setActiveTypeFilter(isActive ? null : key)}
                                     className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all ${isActive
                                         ? `${config.bg} ${config.color} ring-1 ring-current`
                                         : 'bg-black/5 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'
@@ -115,6 +161,7 @@ export function MemorySidebar({ isOpen, onClose, onMemoryClick }: MemorySidebarP
                         {filteredMemories.map((memory) => {
                             const config = FLAG_CONFIG[memory.type as keyof typeof FLAG_CONFIG];
                             const Icon = config.icon;
+                            const userInfo = USERS[memory.addedBy];
                             return (
                                 <button
                                     key={memory.id}
@@ -122,8 +169,15 @@ export function MemorySidebar({ isOpen, onClose, onMemoryClick }: MemorySidebarP
                                     className="w-full text-left p-3 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all group"
                                 >
                                     <div className="flex items-start gap-3">
-                                        <div className={`w-10 h-10 rounded-full ${config.bg} flex items-center justify-center ${config.color} shrink-0`}>
+                                        <div className={`w-10 h-10 rounded-full ${config.bg} flex items-center justify-center ${config.color} shrink-0 relative`}>
                                             <Icon size={18} className="fill-current" />
+                                            {/* User indicator */}
+                                            <span
+                                                className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full text-[8px] flex items-center justify-center border-2 border-white dark:border-gray-800"
+                                                style={{ background: userInfo.color, color: 'white' }}
+                                            >
+                                                {memory.addedBy[0].toUpperCase()}
+                                            </span>
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
@@ -131,9 +185,17 @@ export function MemorySidebar({ isOpen, onClose, onMemoryClick }: MemorySidebarP
                                                 <ChevronRight size={14} className="text-gray-400 group-hover:translate-x-0.5 transition-transform" />
                                             </div>
                                             <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{memory.memo}</p>
-                                            <div className="flex items-center gap-1 mt-1.5 text-[10px] text-gray-400">
-                                                <Calendar size={10} />
-                                                <span>{new Date(memory.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                            <div className="flex items-center gap-2 mt-1.5">
+                                                <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                                                    <Calendar size={10} />
+                                                    <span>{new Date(memory.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                                </div>
+                                                <span
+                                                    className="text-[10px] px-1.5 py-0.5 rounded-full"
+                                                    style={{ background: userInfo.color + '15', color: userInfo.color }}
+                                                >
+                                                    {userInfo.name}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -145,8 +207,8 @@ export function MemorySidebar({ isOpen, onClose, onMemoryClick }: MemorySidebarP
                     {filteredMemories.length === 0 && (
                         <div className="text-center py-8 text-gray-400">
                             <MapPin size={24} className="mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">No memories yet</p>
-                            <p className="text-xs mt-1">Start adding your adventures!</p>
+                            <p className="text-sm">No memories found</p>
+                            <p className="text-xs mt-1">Try adjusting your filters</p>
                         </div>
                     )}
                 </div>
