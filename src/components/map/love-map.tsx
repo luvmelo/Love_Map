@@ -4,6 +4,8 @@ import { Map, MapMouseEvent } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
 import { SearchBox } from './search-box';
 import { AddMemoryModal } from './add-memory-modal';
+import { MemorySidebar } from '../ui/memory-sidebar';
+import { Menu, Home, Plus, User } from 'lucide-react';
 
 const DEFAULT_CENTER = { lat: 37.7749, lng: -122.4194 }; // San Francisco
 const DEFAULT_ZOOM = 12;
@@ -11,6 +13,7 @@ const DEFAULT_ZOOM = 12;
 export default function LoveMap() {
     const [center, setCenter] = useState(DEFAULT_CENTER);
     const [isAddMode, setIsAddMode] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string } | null>(null);
     const [lastSearchedPlace, setLastSearchedPlace] = useState<google.maps.places.PlaceResult | null>(null);
 
@@ -18,33 +21,55 @@ export default function LoveMap() {
         if (isAddMode && event.detail.latLng) {
             const lat = event.detail.latLng.lat;
             const lng = event.detail.latLng.lng;
-
-            // If we have a searched place and we are adding, we can try to use its name 
-            // if the user clicked (approximating) near it, OR we just default to it if the user just searched.
-            // For now, let's just pass the searched name if available, otherwise just coords.
             const name = lastSearchedPlace ? lastSearchedPlace.name : undefined;
-
             setTempMarker({ lat, lng, name });
         }
     };
 
     return (
-        <div className="relative w-full h-screen bg-black">
+        <div className="relative w-full h-screen bg-[#0a0a1a] overflow-hidden">
+            {/* Space Background - Stars */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a1a] via-[#1a1a3a] to-[#0a0a1a]" />
+                {/* Animated stars layer */}
+                <div className="stars-layer absolute inset-0 opacity-60" />
+            </div>
+
             <Map
                 defaultCenter={DEFAULT_CENTER}
-                defaultZoom={3} // GLOBE VIEW: Zoom out to see the sphere
+                defaultZoom={2.5}
                 defaultTilt={0}
                 defaultHeading={0}
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
                 mapId={process.env.NEXT_PUBLIC_GOOGLE_MAP_ID}
                 renderingType="VECTOR"
-                className="w-full h-full"
+                className="w-full h-full relative z-10"
                 onClick={handleMapClick}
+                minZoom={2} // Prevent zooming out too far (avoids tile repeat)
+                restriction={{
+                    latLngBounds: {
+                        north: 85,
+                        south: -85,
+                        west: -180,
+                        east: 180,
+                    },
+                    strictBounds: true,
+                }}
             />
 
             {/* Glass Overlay: Top Search Bar */}
             <SearchBox onPlaceSelect={(place) => setLastSearchedPlace(place)} />
+
+            {/* Memory Sidebar */}
+            <MemorySidebar
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+                onMemoryClick={(memory) => {
+                    console.log("Navigate to memory:", memory);
+                    // TODO: Fly to memory location
+                }}
+            />
 
             {/* Creation Modal */}
             {tempMarker && (
@@ -57,22 +82,33 @@ export default function LoveMap() {
                         console.log("Saving memory:", data);
                         setTempMarker(null);
                         setIsAddMode(false);
-                        setLastSearchedPlace(null); // Reset after save
+                        setLastSearchedPlace(null);
                     }}
                 />
             )}
 
             {/* Glass Overlay: Bottom Dock */}
             <div className="absolute bottom-10 left-0 right-0 flex justify-center z-10">
-                <div className="glass h-16 px-6 rounded-2xl flex items-center gap-6 shadow-2xl border-white/40 transform transition-all hover:scale-105">
+                <div className="glass h-16 px-5 rounded-2xl flex items-center gap-4 shadow-2xl">
+                    {/* Sidebar Toggle */}
+                    <button
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isSidebarOpen
+                            ? 'bg-blue-500/10 text-blue-500'
+                            : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'
+                            }`}
+                    >
+                        <Menu size={20} />
+                    </button>
+
                     {/* Home Button */}
                     <button
                         onClick={() => {
-                            // Reset View Logic
+                            // Reset to globe view
                         }}
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-black/5 transition-colors"
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                        <Home size={20} />
                     </button>
 
                     {/* Add Memory Button (Primary) */}
@@ -83,18 +119,20 @@ export default function LoveMap() {
                             : 'bg-black text-white dark:bg-white dark:text-black shadow-black/30'
                             }`}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                        <Plus size={28} />
                     </button>
 
                     {/* Profile Button */}
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-300 to-blue-300 border-2 border-white shadow-sm" />
+                    <button className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-300 to-blue-300 border-2 border-white shadow-sm overflow-hidden">
+                        {/* Could show user avatar here */}
+                    </button>
                 </div>
             </div>
 
             {/* Mode Indicator */}
             {isAddMode && (
                 <div className="absolute top-24 left-0 right-0 flex justify-center pointer-events-none">
-                    <div className="glass px-4 py-2 rounded-full text-sm font-medium text-blue-600 animate-in fade-in slide-in-from-top-4">
+                    <div className="glass px-4 py-2 rounded-full text-sm font-medium text-blue-600 animate-fade-in">
                         Tap anywhere to drop a pin 📍
                     </div>
                 </div>
@@ -102,3 +140,4 @@ export default function LoveMap() {
         </div>
     );
 }
+
