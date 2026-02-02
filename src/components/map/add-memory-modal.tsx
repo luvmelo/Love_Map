@@ -6,6 +6,7 @@ import { Camera, Heart, Utensils, Plane, Mountain, X } from 'lucide-react';
 interface AddMemoryModalProps {
     lat: number;
     lng: number;
+    placeName?: string;
     onClose: () => void;
     onSave: (data: any) => void;
 }
@@ -17,30 +18,32 @@ const FLAGS = [
     { id: 'adventure', label: 'Fun', icon: Mountain, color: 'text-green-500', bg: 'bg-green-500/10 border-green-500/20' },
 ];
 
-export function AddMemoryModal({ lat, lng, onClose, onSave }: AddMemoryModalProps) {
+export function AddMemoryModal({ lat, lng, placeName, onClose, onSave }: AddMemoryModalProps) {
     const [memo, setMemo] = useState('');
     const [selectedFlag, setSelectedFlag] = useState(FLAGS[0].id);
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px] p-4">
-            <div className="glass-card w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300 shadow-2xl">
+            <div className="glass-card w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300 shadow-2xl ring-1 ring-white/20">
 
                 {/* Header Photo Placeholder */}
-                <div className="h-40 bg-gray-100 dark:bg-neutral-800 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors">
-                    <Camera size={32} />
-                    <span className="text-xs mt-2 font-medium">Add Cover Photo</span>
+                <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-neutral-800 dark:to-neutral-900 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:opacity-90 transition-opacity relative group">
+                    <Camera size={32} className="group-hover:scale-110 transition-transform duration-300" />
+                    <span className="text-xs mt-2 font-medium tracking-wide">Add Cover Photo</span>
                 </div>
 
                 <div className="p-6">
                     {/* Header */}
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-6">
                         <div>
-                            <h2 className="text-xl font-bold">New Memory</h2>
-                            <p className="text-xs text-gray-500 mt-1">
-                                {lat.toFixed(4)}, {lng.toFixed(4)}
-                            </p>
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                {placeName || "New Memory"}
+                            </h2>
+                            <div className="flex items-center gap-1 text-xs text-gray-500 mt-1 font-mono">
+                                📍 {lat.toFixed(4)}, {lng.toFixed(4)}
+                            </div>
                         </div>
-                        <button onClick={onClose} className="p-1 rounded-full hover:bg-black/5 text-gray-500">
+                        <button onClick={onClose} className="p-2 -mr-2 -mt-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 transition-colors">
                             <X size={20} />
                         </button>
                     </div>

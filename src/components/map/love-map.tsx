@@ -11,13 +11,20 @@ const DEFAULT_ZOOM = 12;
 export default function LoveMap() {
     const [center, setCenter] = useState(DEFAULT_CENTER);
     const [isAddMode, setIsAddMode] = useState(false);
-    const [tempMarker, setTempMarker] = useState<google.maps.LatLngLiteral | null>(null);
+    const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string } | null>(null);
+    const [lastSearchedPlace, setLastSearchedPlace] = useState<google.maps.places.PlaceResult | null>(null);
 
     const handleMapClick = (event: MapMouseEvent) => {
         if (isAddMode && event.detail.latLng) {
             const lat = event.detail.latLng.lat;
             const lng = event.detail.latLng.lng;
-            setTempMarker({ lat, lng });
+
+            // If we have a searched place and we are adding, we can try to use its name 
+            // if the user clicked (approximating) near it, OR we just default to it if the user just searched.
+            // For now, let's just pass the searched name if available, otherwise just coords.
+            const name = lastSearchedPlace ? lastSearchedPlace.name : undefined;
+
+            setTempMarker({ lat, lng, name });
         }
     };
 
@@ -37,18 +44,20 @@ export default function LoveMap() {
             />
 
             {/* Glass Overlay: Top Search Bar */}
-            <SearchBox />
+            <SearchBox onPlaceSelect={(place) => setLastSearchedPlace(place)} />
 
             {/* Creation Modal */}
             {tempMarker && (
                 <AddMemoryModal
                     lat={tempMarker.lat}
                     lng={tempMarker.lng}
+                    placeName={tempMarker.name}
                     onClose={() => setTempMarker(null)}
                     onSave={(data) => {
                         console.log("Saving memory:", data);
                         setTempMarker(null);
                         setIsAddMode(false);
+                        setLastSearchedPlace(null); // Reset after save
                     }}
                 />
             )}
