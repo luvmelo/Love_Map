@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Camera, Heart, Utensils, Plane, Mountain, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Camera, Heart, Utensils, Plane, Mountain, X, ImagePlus } from 'lucide-react';
 import { useMapsLibrary, useMap } from '@vis.gl/react-google-maps';
 
 interface AddMemoryModalProps {
@@ -25,9 +25,26 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
     const [selectedFlag, setSelectedFlag] = useState(FLAGS[0].id);
     const [locationName, setLocationName] = useState<string>(placeName || '');
     const [isLoadingName, setIsLoadingName] = useState(!placeName);
+    const [coverPhoto, setCoverPhoto] = useState<File | null>(null);
+    const [coverPhotoPreview, setCoverPhotoPreview] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const geocodingLib = useMapsLibrary('geocoding');
     const placesLib = useMapsLibrary('places');
     const map = useMap();
+
+    // Handle file selection for cover photo
+    const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setCoverPhoto(file);
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCoverPhotoPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     // Helper function to calculate distance between two points
     const getDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -209,10 +226,40 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px] p-4">
             <div className="glass-card w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300 shadow-2xl ring-1 ring-white/20">
 
-                {/* Header Photo Placeholder */}
-                <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-neutral-800 dark:to-neutral-900 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:opacity-90 transition-opacity relative group">
-                    <Camera size={32} className="group-hover:scale-110 transition-transform duration-300" />
-                    <span className="text-xs mt-2 font-medium tracking-wide">Add Cover Photo</span>
+                {/* Hidden file input */}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handlePhotoSelect}
+                    accept="image/*"
+                    className="hidden"
+                />
+
+                {/* Cover Photo Area */}
+                <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-neutral-800 dark:to-neutral-900 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:opacity-90 transition-opacity relative group overflow-hidden"
+                >
+                    {coverPhotoPreview ? (
+                        <>
+                            <img
+                                src={coverPhotoPreview}
+                                alt="Cover preview"
+                                className="absolute inset-0 w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <div className="text-white text-center">
+                                    <ImagePlus size={24} className="mx-auto mb-1" />
+                                    <span className="text-xs font-medium">Change Photo</span>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <Camera size={32} className="group-hover:scale-110 transition-transform duration-300" />
+                            <span className="text-xs mt-2 font-medium tracking-wide">Add Cover Photo</span>
+                        </>
+                    )}
                 </div>
 
                 <div className="p-6">
@@ -271,7 +318,15 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
                             Cancel
                         </button>
                         <button
-                            onClick={() => onSave({ lat, lng, memo, type: selectedFlag })}
+                            onClick={() => onSave({
+                                lat,
+                                lng,
+                                memo,
+                                type: selectedFlag,
+                                locationName,
+                                coverPhoto,
+                                coverPhotoPreview
+                            })}
                             className="flex-1 py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl text-sm font-bold shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >
                             Save Memory

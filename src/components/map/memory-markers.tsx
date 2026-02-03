@@ -17,6 +17,7 @@ export interface Memory {
     lat: number;
     lng: number;
     addedBy: User;
+    coverPhotoUrl?: string;
 }
 
 // Pin colors matching your design system

@@ -44,8 +44,13 @@ export interface Database {
                 Row: MemoryRow
                 Insert: MemoryInsert
                 Update: MemoryUpdate
+                Relationships: []
             }
         }
+        Views: Record<string, never>
+        Functions: Record<string, never>
+        Enums: Record<string, never>
+        CompositeTypes: Record<string, never>
     }
 }
 

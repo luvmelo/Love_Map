@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Camera, Heart, Utensils, Plane, Mountain, X, Edit3, Trash2, Calendar, MapPin, Check } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Camera, Heart, Utensils, Plane, Mountain, X, Edit3, Trash2, Calendar, MapPin, Check, ImagePlus } from 'lucide-react';
 import { Memory } from './memory-markers';
 import { USERS } from '../../contexts/user-context';
 
@@ -23,20 +23,42 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
     const [isEditing, setIsEditing] = useState(false);
     const [editedMemo, setEditedMemo] = useState(memory.memo);
     const [editedType, setEditedType] = useState(memory.type);
+    const [editedPhoto, setEditedPhoto] = useState<File | null>(null);
+    const [editedPhotoPreview, setEditedPhotoPreview] = useState<string | null>(memory.coverPhotoUrl || null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const config = FLAGS.find(f => f.id === memory.type) || FLAGS[0];
     const editingConfig = FLAGS.find(f => f.id === editedType) || FLAGS[0];
     const userInfo = USERS[memory.addedBy];
     const Icon = config.icon;
 
+    // Handle photo selection
+    const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setEditedPhoto(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setEditedPhotoPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleSave = () => {
-        onSave?.({ memo: editedMemo, type: editedType });
+        onSave?.({
+            memo: editedMemo,
+            type: editedType,
+            coverPhotoUrl: editedPhotoPreview || undefined,
+        });
         setIsEditing(false);
     };
 
     const handleCancel = () => {
         setEditedMemo(memory.memo);
         setEditedType(memory.type);
+        setEditedPhoto(null);
+        setEditedPhotoPreview(memory.coverPhotoUrl || null);
         setIsEditing(false);
     };
 
@@ -44,25 +66,65 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
             <div className="glass-card w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300 shadow-2xl ring-1 ring-white/20">
 
-                {/* Header Photo Placeholder - could show cover image if available */}
-                <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-neutral-800 dark:to-neutral-900 flex items-center justify-center relative overflow-hidden">
-                    {/* Abstract pattern background */}
-                    <div className="absolute inset-0 opacity-30">
-                        <div
-                            className="absolute inset-0"
-                            style={{
-                                background: `radial-gradient(circle at 30% 70%, ${config.color.includes('pink') ? '#ec489940' : config.color.includes('orange') ? '#f9731640' : config.color.includes('blue') ? '#3b82f640' : '#22c55e40'} 0%, transparent 50%)`,
-                            }}
-                        />
-                    </div>
-                    {/* Category Icon */}
-                    <div className={`w-16 h-16 rounded-2xl ${config.bg} border flex items-center justify-center ${config.color} relative z-10`}>
-                        <Icon size={32} className="fill-current" />
-                    </div>
+                {/* Hidden file input */}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handlePhotoSelect}
+                    accept="image/*"
+                    className="hidden"
+                />
+
+                {/* Header Photo Area - now shows cover photo if available */}
+                <div
+                    onClick={isEditing ? () => fileInputRef.current?.click() : undefined}
+                    className={`h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-neutral-800 dark:to-neutral-900 flex items-center justify-center relative overflow-hidden ${isEditing ? 'cursor-pointer group' : ''}`}
+                >
+                    {/* Show cover photo if available */}
+                    {editedPhotoPreview ? (
+                        <>
+                            <img
+                                src={editedPhotoPreview}
+                                alt="Cover"
+                                className="absolute inset-0 w-full h-full object-cover"
+                            />
+                            {isEditing && (
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <div className="text-white text-center">
+                                        <ImagePlus size={24} className="mx-auto mb-1" />
+                                        <span className="text-xs font-medium">Change Photo</span>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            {/* Abstract pattern background */}
+                            <div className="absolute inset-0 opacity-30">
+                                <div
+                                    className="absolute inset-0"
+                                    style={{
+                                        background: `radial-gradient(circle at 30% 70%, ${config.color.includes('pink') ? '#ec489940' : config.color.includes('orange') ? '#f9731640' : config.color.includes('blue') ? '#3b82f640' : '#22c55e40'} 0%, transparent 50%)`,
+                                    }}
+                                />
+                            </div>
+                            {/* Category Icon or Add Photo prompt */}
+                            {isEditing ? (
+                                <div className="relative z-10 text-gray-400 text-center group-hover:scale-110 transition-transform">
+                                    <Camera size={32} className="mx-auto" />
+                                    <span className="text-xs mt-1 block">Add Cover Photo</span>
+                                </div>
+                            ) : (
+                                <div className={`w-16 h-16 rounded-2xl ${config.bg} border flex items-center justify-center ${config.color} relative z-10`}>
+                                    <Icon size={32} className="fill-current" />
+                                </div>
+                            )}
+                        </>
+                    )}
                     {/* Close button */}
                     <button
                         onClick={onClose}
-                        className="absolute top-3 right-3 p-2 rounded-full glass hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors"
+                        className="absolute top-3 right-3 p-2 rounded-full glass hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors z-20"
                     >
                         <X size={18} />
                     </button>

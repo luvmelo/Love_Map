@@ -1,7 +1,7 @@
 'use client';
 
-import { Map, MapMouseEvent } from '@vis.gl/react-google-maps';
-import { useState } from 'react';
+import { Map, MapMouseEvent, useMap } from '@vis.gl/react-google-maps';
+import { useState, useCallback } from 'react';
 import { SearchBox } from './search-box';
 import { AddMemoryModal } from './add-memory-modal';
 import { MemoryDetailModal } from './memory-detail-modal';
@@ -30,6 +30,153 @@ const MAP_RESTRICTION = {
     },
     strictBounds: true,
 };
+
+// MapControls - rendered inside Map to access useMap() context
+interface MapControlsProps {
+    isSidebarOpen: boolean;
+    setIsSidebarOpen: (open: boolean) => void;
+    isAddMode: boolean;
+    setIsAddMode: (mode: boolean) => void;
+    isUserMenuOpen: boolean;
+    setIsUserMenuOpen: (open: boolean) => void;
+    userInfo: typeof USERS[keyof typeof USERS];
+    currentUser: User;
+    switchUser: (user: User) => void;
+}
+
+function MapControls({
+    isSidebarOpen, setIsSidebarOpen,
+    isAddMode, setIsAddMode,
+    isUserMenuOpen, setIsUserMenuOpen,
+    userInfo, currentUser, switchUser
+}: MapControlsProps) {
+    const map = useMap();
+
+    // Smooth animated zoom function
+    const smoothZoomTo = useCallback((targetZoom: number, targetCenter: google.maps.LatLngLiteral) => {
+        if (!map) return;
+
+        const currentZoom = map.getZoom() || 3;
+        const zoomDiff = targetZoom - currentZoom;
+        const steps = Math.max(1, Math.abs(Math.round(zoomDiff)));
+        const duration = 800; // ms total
+        const stepDelay = duration / steps;
+
+        // Pan to center first with smooth animation
+        map.panTo(targetCenter);
+
+        // Gradually adjust zoom
+        let currentStep = 0;
+        const zoomStep = zoomDiff / steps;
+
+        const animateZoom = () => {
+            currentStep++;
+            const newZoom = currentZoom + (zoomStep * currentStep);
+            map.setZoom(newZoom);
+
+            if (currentStep < steps) {
+                setTimeout(animateZoom, stepDelay);
+            }
+        };
+
+        // Start zoom animation after pan begins
+        setTimeout(animateZoom, 100);
+    }, [map]);
+
+    const handleHomeClick = useCallback(() => {
+        if (!map) return;
+
+        // Try to get user's current location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    smoothZoomTo(12, { lat: latitude, lng: longitude });
+                },
+                () => {
+                    // Fallback to default center if geolocation fails
+                    smoothZoomTo(3, DEFAULT_CENTER);
+                }
+            );
+        } else {
+            // Fallback if geolocation not available
+            smoothZoomTo(3, DEFAULT_CENTER);
+        }
+    }, [map, smoothZoomTo]);
+
+    return (
+        <div className="absolute bottom-10 left-0 right-0 flex justify-center z-10">
+            <div className="glass h-16 px-5 rounded-2xl flex items-center gap-4 shadow-2xl">
+                {/* Sidebar Toggle */}
+                <button
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isSidebarOpen
+                        ? 'bg-blue-500/10 text-blue-500'
+                        : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'
+                        }`}
+                >
+                    <Menu size={20} />
+                </button>
+
+                {/* Home Button */}
+                <button
+                    onClick={handleHomeClick}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                    title="Go to your location"
+                >
+                    <Home size={20} />
+                </button>
+
+                {/* Add Memory Button (Primary) */}
+                <button
+                    onClick={() => setIsAddMode(!isAddMode)}
+                    className={`w-14 h-14 -mt-6 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${isAddMode
+                        ? 'bg-red-500 text-white rotate-45 shadow-red-500/40'
+                        : 'bg-black text-white dark:bg-white dark:text-black shadow-black/30'
+                        }`}
+                >
+                    <Plus size={28} />
+                </button>
+
+                {/* User Switcher Button */}
+                <div className="relative">
+                    <button
+                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                        className="glass w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden transition-all hover:scale-105 hover:shadow-xl"
+                    >
+                        <span className="text-lg">{userInfo.avatar}</span>
+                    </button>
+
+                    {/* User Menu Dropdown */}
+                    {isUserMenuOpen && (
+                        <div className="absolute bottom-14 right-0 glass-card p-2 min-w-[140px] animate-slide-up">
+                            <div className="text-xs text-gray-500 px-2 mb-1">Switch user</div>
+                            {(['melo', 'may'] as User[]).map((user) => (
+                                <button
+                                    key={user}
+                                    onClick={() => {
+                                        switchUser(user);
+                                        setIsUserMenuOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-2 p-2 rounded-lg transition-colors ${currentUser === user
+                                        ? 'bg-black/5 dark:bg-white/10'
+                                        : 'hover:bg-black/5 dark:hover:bg-white/10'
+                                        }`}
+                                >
+                                    <span>{USERS[user].avatar}</span>
+                                    <span className="text-sm font-medium">{USERS[user].name}</span>
+                                    {currentUser === user && (
+                                        <span className="ml-auto text-green-500 text-xs">✓</span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function LoveMap() {
     const { currentUser, userInfo, switchUser, otherUser } = useUser();
@@ -101,6 +248,18 @@ export default function LoveMap() {
                     filterByUser={userFilter}
                     onMemoryClick={(memory) => setSelectedMemory(memory)}
                 />
+                {/* Map Controls rendered inside Map for useMap() access */}
+                <MapControls
+                    isSidebarOpen={isSidebarOpen}
+                    setIsSidebarOpen={setIsSidebarOpen}
+                    isAddMode={isAddMode}
+                    setIsAddMode={setIsAddMode}
+                    isUserMenuOpen={isUserMenuOpen}
+                    setIsUserMenuOpen={setIsUserMenuOpen}
+                    userInfo={userInfo}
+                    currentUser={currentUser}
+                    switchUser={switchUser}
+                />
             </Map>
 
             {/* Glass Overlay: Top Search Bar */}
@@ -151,81 +310,7 @@ export default function LoveMap() {
                 />
             )}
 
-            {/* Glass Overlay: Bottom Dock */}
-            <div className="absolute bottom-10 left-0 right-0 flex justify-center z-10">
-                <div className="glass h-16 px-5 rounded-2xl flex items-center gap-4 shadow-2xl">
-                    {/* Sidebar Toggle */}
-                    <button
-                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isSidebarOpen
-                            ? 'bg-blue-500/10 text-blue-500'
-                            : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'
-                            }`}
-                    >
-                        <Menu size={20} />
-                    </button>
 
-                    {/* Home Button */}
-                    <button
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                    >
-                        <Home size={20} />
-                    </button>
-
-
-                    {/* Add Memory Button (Primary) */}
-                    <button
-                        onClick={() => setIsAddMode(!isAddMode)}
-                        className={`w-14 h-14 -mt-6 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${isAddMode
-                            ? 'bg-red-500 text-white rotate-45 shadow-red-500/40'
-                            : 'bg-black text-white dark:bg-white dark:text-black shadow-black/30'
-                            }`}
-                    >
-                        <Plus size={28} />
-                    </button>
-
-                    {/* User Switcher Button */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                            className="glass w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden transition-all hover:scale-105 hover:shadow-xl"
-                        >
-                            <span className="text-lg">{userInfo.avatar}</span>
-                        </button>
-
-                        {/* User Menu Dropdown */}
-                        {isUserMenuOpen && (
-                            <div className="absolute bottom-14 right-0 glass-card p-2 min-w-[140px] animate-slide-up">
-                                <div className="text-xs text-gray-500 px-2 mb-1">Switch user</div>
-                                {(['melo', 'may'] as User[]).map((user) => (
-                                    <button
-                                        key={user}
-                                        onClick={() => {
-                                            switchUser(user);
-                                            setIsUserMenuOpen(false);
-                                        }}
-                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${currentUser === user
-                                            ? 'bg-black/10 dark:bg-white/10'
-                                            : 'hover:bg-black/5 dark:hover:bg-white/5'
-                                            }`}
-                                    >
-                                        <span
-                                            className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
-                                            style={{ background: USERS[user].color + '20', color: USERS[user].color }}
-                                        >
-                                            {USERS[user].avatar}
-                                        </span>
-                                        <span className="text-sm font-medium">{USERS[user].name}</span>
-                                        {currentUser === user && (
-                                            <span className="ml-auto text-xs text-gray-400">✓</span>
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
 
             {/* Mode Indicator */}
             {isAddMode && (
