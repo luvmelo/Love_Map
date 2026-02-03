@@ -18,6 +18,7 @@ export interface Memory {
     lng: number;
     addedBy: User;
     coverPhotoUrl?: string;
+    photos?: string[];  // Array of photo URLs for multi-image support
 }
 
 // Pin colors matching your design system
@@ -32,6 +33,12 @@ const PIN_COLORS = {
 const USER_COLORS = {
     melo: '#6366f1',  // Indigo
     may: '#f472b6',   // Pink
+};
+
+// User emoji avatars for better differentiation
+const USER_AVATARS = {
+    melo: '🧑‍💻',
+    may: '👩‍🎨',
 };
 
 // SVG icon paths for each memory type
@@ -104,27 +111,24 @@ function createPinElement(memory: Memory): HTMLElement {
 
     container.appendChild(div);
 
-    // User indicator badge (small circle at bottom-right)
+    // User indicator badge (emoji avatar at bottom-right)
     const userBadge = document.createElement('div');
     userBadge.style.cssText = `
         position: absolute;
-        bottom: -2px;
-        right: -2px;
-        width: 16px;
-        height: 16px;
+        bottom: -4px;
+        right: -4px;
+        width: 20px;
+        height: 20px;
         background: ${userColor};
         border: 2px solid white;
         border-radius: 50%;
-        font-size: 8px;
-        font-weight: 700;
-        color: white;
+        font-size: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        text-transform: uppercase;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.25);
     `;
-    userBadge.textContent = memory.addedBy[0]; // 'M' for both, but different colors
+    userBadge.textContent = USER_AVATARS[memory.addedBy];
     container.appendChild(userBadge);
 
     // Hover effects

@@ -25,25 +25,41 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
     const [selectedFlag, setSelectedFlag] = useState(FLAGS[0].id);
     const [locationName, setLocationName] = useState<string>(placeName || '');
     const [isLoadingName, setIsLoadingName] = useState(!placeName);
-    const [coverPhoto, setCoverPhoto] = useState<File | null>(null);
-    const [coverPhotoPreview, setCoverPhotoPreview] = useState<string | null>(null);
+    const [photos, setPhotos] = useState<File[]>([]);
+    const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const geocodingLib = useMapsLibrary('geocoding');
     const placesLib = useMapsLibrary('places');
     const map = useMap();
 
-    // Handle file selection for cover photo
+    // Maximum 6 photos allowed
+    const MAX_PHOTOS = 6;
+
+    // Handle file selection for photos (supports multiple)
     const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setCoverPhoto(file);
-            // Create preview URL
+        const files = e.target.files;
+        if (!files) return;
+
+        const newFiles = Array.from(files).slice(0, MAX_PHOTOS - photos.length);
+        if (newFiles.length === 0) return;
+
+        // Add to existing photos
+        setPhotos(prev => [...prev, ...newFiles]);
+
+        // Create preview URLs for new files
+        newFiles.forEach(file => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setCoverPhotoPreview(reader.result as string);
+                setPhotoPreviews(prev => [...prev, reader.result as string]);
             };
             reader.readAsDataURL(file);
-        }
+        });
+    };
+
+    // Remove a photo
+    const handleRemovePhoto = (index: number) => {
+        setPhotos(prev => prev.filter((_, i) => i !== index));
+        setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
     };
 
     // Helper function to calculate distance between two points
@@ -232,34 +248,48 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
                     ref={fileInputRef}
                     onChange={handlePhotoSelect}
                     accept="image/*"
+                    multiple
                     className="hidden"
                 />
 
-                {/* Cover Photo Area */}
-                <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="h-40 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-neutral-800 dark:to-neutral-900 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:opacity-90 transition-opacity relative group overflow-hidden"
-                >
-                    {coverPhotoPreview ? (
-                        <>
-                            <img
-                                src={coverPhotoPreview}
-                                alt="Cover preview"
-                                className="absolute inset-0 w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <div className="text-white text-center">
-                                    <ImagePlus size={24} className="mx-auto mb-1" />
-                                    <span className="text-xs font-medium">Change Photo</span>
-                                </div>
+                {/* Photo Grid Area */}
+                <div className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-neutral-800 dark:to-neutral-900">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-gray-500">
+                            Photos ({photoPreviews.length}/{MAX_PHOTOS})
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {/* Existing photo previews */}
+                        {photoPreviews.map((preview, index) => (
+                            <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
+                                <img
+                                    src={preview}
+                                    alt={`Photo ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                />
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemovePhoto(index);
+                                    }}
+                                    className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X size={12} className="text-white" />
+                                </button>
                             </div>
-                        </>
-                    ) : (
-                        <>
-                            <Camera size={32} className="group-hover:scale-110 transition-transform duration-300" />
-                            <span className="text-xs mt-2 font-medium tracking-wide">Add Cover Photo</span>
-                        </>
-                    )}
+                        ))}
+                        {/* Add more button */}
+                        {photoPreviews.length < MAX_PHOTOS && (
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="aspect-square rounded-lg border-2 border-dashed border-gray-300 dark:border-neutral-600 flex flex-col items-center justify-center text-gray-400 hover:border-gray-400 hover:text-gray-500 transition-colors"
+                            >
+                                <ImagePlus size={20} />
+                                <span className="text-[10px] mt-1 font-medium">Add</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="p-6">
@@ -324,8 +354,9 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
                                 memo,
                                 type: selectedFlag,
                                 locationName,
-                                coverPhoto,
-                                coverPhotoPreview
+                                date: new Date().toISOString().split('T')[0],
+                                coverPhoto: photos[0] || null,  // First photo as cover
+                                additionalPhotos: photos.slice(1),  // Rest as additional
                             })}
                             className="flex-1 py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl text-sm font-bold shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >

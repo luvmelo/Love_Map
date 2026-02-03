@@ -15,6 +15,7 @@ function rowToMemory(row: MemoryRow): Memory {
         lng: row.lng,
         addedBy: row.added_by,
         coverPhotoUrl: row.cover_photo_url || undefined,
+        photos: row.photos || undefined,
     };
 }
 
@@ -126,22 +127,69 @@ export async function uploadCoverPhoto(file: File, memoryId: string): Promise<st
     return data.publicUrl;
 }
 
-// Create memory with optional cover photo upload
+// Upload multiple photos to Supabase Storage
+export async function uploadPhotos(files: File[], memoryId: string): Promise<string[]> {
+    if (!isSupabaseConfigured() || !supabase) {
+        console.warn('Supabase not configured, cannot upload photos');
+        return [];
+    }
+
+    const uploadPromises = files.map(async (file, index) => {
+        const fileExt = file.name.split('.').pop();
+        const timestamp = Date.now();
+        const fileName = `${memoryId}_${index}_${timestamp}.${fileExt}`;
+        const filePath = `photos/${fileName}`;
+
+        const { error: uploadError } = await supabase!.storage
+            .from('memory-photos')
+            .upload(filePath, file, { upsert: true });
+
+        if (uploadError) {
+            console.error(`Error uploading photo ${index}:`, uploadError);
+            return null;
+        }
+
+        const { data } = supabase!.storage.from('memory-photos').getPublicUrl(filePath);
+        return data.publicUrl;
+    });
+
+    const results = await Promise.all(uploadPromises);
+    return results.filter((url): url is string => url !== null);
+}
+
+// Create memory with optional photos upload (supports single or multiple)
 export async function createMemoryWithPhoto(
     memory: MemoryInsert,
-    coverPhoto?: File | null
+    coverPhoto?: File | null,
+    additionalPhotos?: File[] | null
 ): Promise<Memory | null> {
     // First create the memory
     const created = await createMemory(memory);
     if (!created) return null;
 
-    // If there's a cover photo, upload it and update the memory
+    const updates: MemoryUpdate = {};
+
+    // Upload cover photo
     if (coverPhoto) {
         const photoUrl = await uploadCoverPhoto(coverPhoto, created.id);
         if (photoUrl) {
-            return await updateMemory(created.id, { cover_photo_url: photoUrl });
+            updates.cover_photo_url = photoUrl;
         }
+    }
+
+    // Upload additional photos
+    if (additionalPhotos && additionalPhotos.length > 0) {
+        const photoUrls = await uploadPhotos(additionalPhotos, created.id);
+        if (photoUrls.length > 0) {
+            updates.photos = photoUrls;
+        }
+    }
+
+    // Update memory with photo URLs if any were uploaded
+    if (Object.keys(updates).length > 0) {
+        return await updateMemory(created.id, updates);
     }
 
     return created;
 }
+

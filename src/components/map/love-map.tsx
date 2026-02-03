@@ -7,8 +7,9 @@ import { AddMemoryModal } from './add-memory-modal';
 import { MemoryDetailModal } from './memory-detail-modal';
 import { MemoryMarkers, Memory, User } from './memory-markers';
 import { MemorySidebar } from '../ui/memory-sidebar';
+import { GalleryView } from '../ui/gallery-view';
 import { useUser, USERS } from '../../contexts/user-context';
-import { Menu, Home, Plus, Users } from 'lucide-react';
+import { Menu, Home, Plus, Users, Images } from 'lucide-react';
 import {
     getMemories,
     createMemoryWithPhoto,
@@ -45,6 +46,8 @@ interface MapControlsProps {
     setIsAddMode: (mode: boolean) => void;
     isUserMenuOpen: boolean;
     setIsUserMenuOpen: (open: boolean) => void;
+    isGalleryOpen: boolean;
+    setIsGalleryOpen: (open: boolean) => void;
     userInfo: typeof USERS[keyof typeof USERS];
     currentUser: User;
     switchUser: (user: User) => void;
@@ -54,6 +57,7 @@ function MapControls({
     isSidebarOpen, setIsSidebarOpen,
     isAddMode, setIsAddMode,
     isUserMenuOpen, setIsUserMenuOpen,
+    isGalleryOpen, setIsGalleryOpen,
     userInfo, currentUser, switchUser
 }: MapControlsProps) {
     const map = useMap();
@@ -133,7 +137,7 @@ function MapControls({
                     <Home size={20} />
                 </button>
 
-                {/* Add Memory Button (Primary) */}
+                {/* Add Memory Button (Primary) - Centered */}
                 <button
                     onClick={() => setIsAddMode(!isAddMode)}
                     className={`w-14 h-14 -mt-6 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${isAddMode
@@ -142,6 +146,18 @@ function MapControls({
                         }`}
                 >
                     <Plus size={28} />
+                </button>
+
+                {/* Gallery Button */}
+                <button
+                    onClick={() => setIsGalleryOpen(true)}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isGalleryOpen
+                        ? 'bg-purple-500/10 text-purple-500'
+                        : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'
+                        }`}
+                    title="Photo Gallery"
+                >
+                    <Images size={20} />
                 </button>
 
                 {/* User Switcher Button */}
@@ -189,6 +205,7 @@ export default function LoveMap() {
     const [isAddMode, setIsAddMode] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string; placeId?: string } | null>(null);
     const [lastSearchedPlace, setLastSearchedPlace] = useState<google.maps.places.PlaceResult | null>(null);
     const [memories, setMemories] = useState<Memory[]>([]);
@@ -280,6 +297,8 @@ export default function LoveMap() {
                     setIsAddMode={setIsAddMode}
                     isUserMenuOpen={isUserMenuOpen}
                     setIsUserMenuOpen={setIsUserMenuOpen}
+                    isGalleryOpen={isGalleryOpen}
+                    setIsGalleryOpen={setIsGalleryOpen}
                     userInfo={userInfo}
                     currentUser={currentUser}
                     switchUser={switchUser}
@@ -319,7 +338,8 @@ export default function LoveMap() {
                                 lng: tempMarker.lng,
                                 added_by: currentUser,
                             },
-                            data.coverPhoto || null
+                            data.coverPhoto || null,
+                            data.additionalPhotos || null
                         );
 
                         if (newMemory) {
@@ -400,6 +420,37 @@ export default function LoveMap() {
                     </div>
                 </div>
             )}
+
+            {/* Photo Gallery */}
+            <GalleryView
+                memories={memories}
+                isOpen={isGalleryOpen}
+                onClose={() => setIsGalleryOpen(false)}
+                onNavigateToMemory={(memory) => {
+                    setIsGalleryOpen(false);
+                    setSelectedMemory(memory);
+                }}
+                onDeletePhoto={async (memoryId, photoUrl) => {
+                    // Find the memory and determine what to update
+                    const memory = memories.find(m => m.id === memoryId);
+                    if (!memory) return;
+
+                    // If it's the cover photo, clear it
+                    if (memory.coverPhotoUrl === photoUrl) {
+                        const updated = await updateMemory(memoryId, { cover_photo_url: null });
+                        if (updated) {
+                            setMemories(prev => prev.map(m => m.id === memoryId ? updated : m));
+                        }
+                    } else if (memory.photos) {
+                        // Remove from photos array
+                        const newPhotos = memory.photos.filter(url => url !== photoUrl);
+                        const updated = await updateMemory(memoryId, { photos: newPhotos.length > 0 ? newPhotos : null });
+                        if (updated) {
+                            setMemories(prev => prev.map(m => m.id === memoryId ? updated : m));
+                        }
+                    }
+                }}
+            />
         </div>
     );
 }

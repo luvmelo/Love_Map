@@ -13,6 +13,7 @@ export interface MemoryRow {
     lng: number
     added_by: UserId
     cover_photo_url?: string | null
+    photos?: string[] | null  // Array of photo URLs for multi-image support
     created_at: string
     updated_at: string
 }
@@ -26,6 +27,7 @@ export interface MemoryInsert {
     lng: number
     added_by: UserId
     cover_photo_url?: string | null
+    photos?: string[] | null
 }
 
 export interface MemoryUpdate {
@@ -34,6 +36,7 @@ export interface MemoryUpdate {
     date?: string
     memo?: string
     cover_photo_url?: string | null
+    photos?: string[] | null
 }
 
 // Database schema type for Supabase client
