@@ -1,7 +1,7 @@
 'use client';
 
 import { Map, MapMouseEvent, useMap } from '@vis.gl/react-google-maps';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SearchBox } from './search-box';
 import { AddMemoryModal } from './add-memory-modal';
 import { MemoryDetailModal } from './memory-detail-modal';
@@ -9,6 +9,12 @@ import { MemoryMarkers, Memory, User } from './memory-markers';
 import { MemorySidebar } from '../ui/memory-sidebar';
 import { useUser, USERS } from '../../contexts/user-context';
 import { Menu, Home, Plus, Users } from 'lucide-react';
+import {
+    getMemories,
+    createMemoryWithPhoto,
+    updateMemory,
+    deleteMemory
+} from '@/lib/memory-service';
 
 const DEFAULT_CENTER = { lat: 35.6762, lng: 139.6503 }; // Tokyo
 
@@ -185,9 +191,27 @@ export default function LoveMap() {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string; placeId?: string } | null>(null);
     const [lastSearchedPlace, setLastSearchedPlace] = useState<google.maps.places.PlaceResult | null>(null);
-    const [memories, setMemories] = useState<Memory[]>(SAMPLE_MEMORIES);
+    const [memories, setMemories] = useState<Memory[]>([]);
     const [userFilter, setUserFilter] = useState<User | null>(null);
     const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Load memories from Supabase on mount
+    useEffect(() => {
+        async function loadMemories() {
+            setIsLoading(true);
+            const data = await getMemories();
+            // Use fetched data, or fall back to sample if Supabase not configured
+            if (data.length > 0) {
+                setMemories(data);
+            } else {
+                // Fall back to sample memories for demo
+                setMemories(SAMPLE_MEMORIES);
+            }
+            setIsLoading(false);
+        }
+        loadMemories();
+    }, []);
 
     const handleMapClick = (event: MapMouseEvent) => {
         // Close user menu if open
@@ -283,8 +307,40 @@ export default function LoveMap() {
                     placeName={tempMarker.name}
                     placeId={tempMarker.placeId}
                     onClose={() => setTempMarker(null)}
-                    onSave={(data) => {
-                        console.log("Saving memory:", { ...data, addedBy: currentUser });
+                    onSave={async (data) => {
+                        // Create memory in Supabase
+                        const newMemory = await createMemoryWithPhoto(
+                            {
+                                name: data.locationName || tempMarker.name || 'Unknown Location',
+                                type: data.type,
+                                date: data.date,
+                                memo: data.memo,
+                                lat: tempMarker.lat,
+                                lng: tempMarker.lng,
+                                added_by: currentUser,
+                            },
+                            data.coverPhoto || null
+                        );
+
+                        if (newMemory) {
+                            setMemories(prev => [newMemory, ...prev]);
+                            console.log('✅ Memory saved to Supabase:', newMemory);
+                        } else {
+                            // Fallback for demo mode - add locally
+                            const localMemory: Memory = {
+                                id: `local-${Date.now()}`,
+                                name: data.locationName || tempMarker.name || 'Unknown Location',
+                                type: data.type,
+                                date: data.date,
+                                memo: data.memo,
+                                lat: tempMarker.lat,
+                                lng: tempMarker.lng,
+                                addedBy: currentUser,
+                            };
+                            setMemories(prev => [localMemory, ...prev]);
+                            console.log('⚠️ Supabase not configured, added locally:', localMemory);
+                        }
+
                         setTempMarker(null);
                         setIsAddMode(false);
                         setLastSearchedPlace(null);
@@ -297,13 +353,36 @@ export default function LoveMap() {
                 <MemoryDetailModal
                     memory={selectedMemory}
                     onClose={() => setSelectedMemory(null)}
-                    onSave={(updates) => {
-                        setMemories(prev => prev.map(m =>
-                            m.id === selectedMemory.id ? { ...m, ...updates } : m
-                        ));
+                    onSave={async (updates) => {
+                        // Update in Supabase
+                        const updated = await updateMemory(selectedMemory.id, {
+                            memo: updates.memo,
+                            type: updates.type,
+                            cover_photo_url: updates.coverPhotoUrl,
+                        });
+
+                        if (updated) {
+                            setMemories(prev => prev.map(m =>
+                                m.id === selectedMemory.id ? updated : m
+                            ));
+                            console.log('✅ Memory updated in Supabase:', updated);
+                        } else {
+                            // Fallback: update locally
+                            setMemories(prev => prev.map(m =>
+                                m.id === selectedMemory.id ? { ...m, ...updates } : m
+                            ));
+                            console.log('⚠️ Updated locally');
+                        }
                         setSelectedMemory(null);
                     }}
-                    onDelete={(id) => {
+                    onDelete={async (id) => {
+                        // Delete from Supabase
+                        const success = await deleteMemory(id);
+                        if (success) {
+                            console.log('✅ Memory deleted from Supabase');
+                        } else {
+                            console.log('⚠️ Deleted locally');
+                        }
                         setMemories(prev => prev.filter(m => m.id !== id));
                         setSelectedMemory(null);
                     }}
