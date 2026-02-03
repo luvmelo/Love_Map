@@ -4,6 +4,7 @@ import { Map, MapMouseEvent } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
 import { SearchBox } from './search-box';
 import { AddMemoryModal } from './add-memory-modal';
+import { MemoryDetailModal } from './memory-detail-modal';
 import { MemoryMarkers, Memory, User } from './memory-markers';
 import { MemorySidebar } from '../ui/memory-sidebar';
 import { useUser, USERS } from '../../contexts/user-context';
@@ -35,10 +36,11 @@ export default function LoveMap() {
     const [isAddMode, setIsAddMode] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-    const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string } | null>(null);
+    const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string; placeId?: string } | null>(null);
     const [lastSearchedPlace, setLastSearchedPlace] = useState<google.maps.places.PlaceResult | null>(null);
-    const [memories] = useState<Memory[]>(SAMPLE_MEMORIES);
+    const [memories, setMemories] = useState<Memory[]>(SAMPLE_MEMORIES);
     const [userFilter, setUserFilter] = useState<User | null>(null);
+    const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
 
     const handleMapClick = (event: MapMouseEvent) => {
         // Close user menu if open
@@ -50,8 +52,29 @@ export default function LoveMap() {
         if (isAddMode && event.detail.latLng) {
             const lat = event.detail.latLng.lat;
             const lng = event.detail.latLng.lng;
-            const name = lastSearchedPlace ? lastSearchedPlace.name : undefined;
-            setTempMarker({ lat, lng, name });
+
+            // Check if user clicked on a POI - extract placeId
+            const clickedPlaceId = event.detail.placeId;
+
+            // Only use searched place name if clicking near the searched location (within ~100m)
+            let name: string | undefined = undefined;
+            if (lastSearchedPlace?.geometry?.location) {
+                const searchLat = lastSearchedPlace.geometry.location.lat();
+                const searchLng = lastSearchedPlace.geometry.location.lng();
+                const distance = Math.sqrt(
+                    Math.pow(lat - searchLat, 2) + Math.pow(lng - searchLng, 2)
+                );
+                // ~0.001 degrees is roughly 100m
+                if (distance < 0.001) {
+                    name = lastSearchedPlace.name;
+                }
+            }
+
+            setTempMarker({ lat, lng, name, placeId: clickedPlaceId ?? undefined });
+            // Clear the searched place after clicking elsewhere
+            if (!name) {
+                setLastSearchedPlace(null);
+            }
         }
     };
 
@@ -76,10 +99,7 @@ export default function LoveMap() {
                 <MemoryMarkers
                     memories={memories}
                     filterByUser={userFilter}
-                    onMemoryClick={(memory) => {
-                        console.log("Clicked memory:", memory);
-                        // TODO: Show memory detail modal
-                    }}
+                    onMemoryClick={(memory) => setSelectedMemory(memory)}
                 />
             </Map>
 
@@ -93,10 +113,7 @@ export default function LoveMap() {
                 memories={memories}
                 userFilter={userFilter}
                 onUserFilterChange={setUserFilter}
-                onMemoryClick={(memory) => {
-                    console.log("Navigate to memory:", memory);
-                    // TODO: Fly to memory location
-                }}
+                onMemoryClick={(memory) => setSelectedMemory(memory)}
             />
 
             {/* Creation Modal */}
@@ -105,12 +122,31 @@ export default function LoveMap() {
                     lat={tempMarker.lat}
                     lng={tempMarker.lng}
                     placeName={tempMarker.name}
+                    placeId={tempMarker.placeId}
                     onClose={() => setTempMarker(null)}
                     onSave={(data) => {
                         console.log("Saving memory:", { ...data, addedBy: currentUser });
                         setTempMarker(null);
                         setIsAddMode(false);
                         setLastSearchedPlace(null);
+                    }}
+                />
+            )}
+
+            {/* Memory Detail Modal */}
+            {selectedMemory && (
+                <MemoryDetailModal
+                    memory={selectedMemory}
+                    onClose={() => setSelectedMemory(null)}
+                    onSave={(updates) => {
+                        setMemories(prev => prev.map(m =>
+                            m.id === selectedMemory.id ? { ...m, ...updates } : m
+                        ));
+                        setSelectedMemory(null);
+                    }}
+                    onDelete={(id) => {
+                        setMemories(prev => prev.filter(m => m.id !== id));
+                        setSelectedMemory(null);
                     }}
                 />
             )}
@@ -152,11 +188,7 @@ export default function LoveMap() {
                     <div className="relative">
                         <button
                             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                            className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm overflow-hidden transition-transform hover:scale-105"
-                            style={{
-                                background: `linear-gradient(135deg, ${USERS.melo.color}, ${USERS.may.color})`,
-                                border: `2px solid ${userInfo.color}`,
-                            }}
+                            className="glass w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden transition-all hover:scale-105 hover:shadow-xl"
                         >
                             <span className="text-lg">{userInfo.avatar}</span>
                         </button>
