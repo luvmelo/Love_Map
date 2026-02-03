@@ -1,7 +1,7 @@
 'use client';
 
 import { Map, MapMouseEvent, useMap } from '@vis.gl/react-google-maps';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { SearchBox } from './search-box';
 import { AddMemoryModal } from './add-memory-modal';
 import { MemoryDetailModal } from './memory-detail-modal';
@@ -200,6 +200,57 @@ function MapControls({
     );
 }
 
+// Component to handle fly-to animations from gallery
+interface MapFlyToHandlerProps {
+    flyToTarget: { lat: number; lng: number; memory: Memory } | null;
+    onAnimationComplete: (memory: Memory) => void;
+    onClear: () => void;
+}
+
+function MapFlyToHandler({ flyToTarget, onAnimationComplete, onClear }: MapFlyToHandlerProps) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!flyToTarget || !map) return;
+
+        const targetZoom = 16;
+        const currentZoom = map.getZoom() || 3;
+        const zoomDiff = targetZoom - currentZoom;
+        const steps = Math.max(1, Math.abs(Math.round(zoomDiff)));
+        const duration = 1200; // longer for dramatic effect
+        const stepDelay = duration / steps;
+
+        // Pan to center first
+        map.panTo({ lat: flyToTarget.lat, lng: flyToTarget.lng });
+
+        // Gradually zoom in
+        let currentStep = 0;
+        const zoomStep = zoomDiff / steps;
+
+        const animateZoom = () => {
+            currentStep++;
+            const newZoom = currentZoom + (zoomStep * currentStep);
+            map.setZoom(newZoom);
+
+            if (currentStep < steps) {
+                setTimeout(animateZoom, stepDelay);
+            } else {
+                // Animation complete, open the detail modal
+                setTimeout(() => {
+                    onAnimationComplete(flyToTarget.memory);
+                    onClear();
+                }, 300);
+            }
+        };
+
+        // Start zoom animation after pan begins
+        setTimeout(animateZoom, 200);
+
+    }, [flyToTarget, map, onAnimationComplete, onClear]);
+
+    return null;
+}
+
 export default function LoveMap() {
     const { currentUser, userInfo, switchUser, otherUser } = useUser();
     const [isAddMode, setIsAddMode] = useState(false);
@@ -212,6 +263,8 @@ export default function LoveMap() {
     const [userFilter, setUserFilter] = useState<User | null>(null);
     const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number; memory: Memory } | null>(null);
+    const [pendingMemoryDetail, setPendingMemoryDetail] = useState<Memory | null>(null);
 
     // Load memories from Supabase on mount
     useEffect(() => {
@@ -302,6 +355,12 @@ export default function LoveMap() {
                     userInfo={userInfo}
                     currentUser={currentUser}
                     switchUser={switchUser}
+                />
+                {/* Fly-to handler for gallery navigation */}
+                <MapFlyToHandler
+                    flyToTarget={flyToTarget}
+                    onAnimationComplete={(memory) => setSelectedMemory(memory)}
+                    onClear={() => setFlyToTarget(null)}
                 />
             </Map>
 
@@ -428,7 +487,8 @@ export default function LoveMap() {
                 onClose={() => setIsGalleryOpen(false)}
                 onNavigateToMemory={(memory) => {
                     setIsGalleryOpen(false);
-                    setSelectedMemory(memory);
+                    // Trigger fly-to animation instead of directly opening detail
+                    setFlyToTarget({ lat: memory.lat, lng: memory.lng, memory });
                 }}
                 onDeletePhoto={async (memoryId, photoUrl) => {
                     // Find the memory and determine what to update

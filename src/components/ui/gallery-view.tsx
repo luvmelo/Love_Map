@@ -196,8 +196,8 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
                                             {/* Selection checkbox */}
                                             {isSelectMode && (
                                                 <div className={`absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected
-                                                        ? 'bg-blue-500 text-white'
-                                                        : 'bg-white/80 dark:bg-black/50 border border-gray-300 dark:border-gray-600'
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-white/80 dark:bg-black/50 border border-gray-300 dark:border-gray-600'
                                                     }`}>
                                                     {isSelected && <Check size={14} />}
                                                 </div>
@@ -205,16 +205,23 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
 
                                             {/* Hover overlay (only when not in select mode) */}
                                             {!isSelectMode && (
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                                             )}
 
-                                            {/* User badge on hover */}
+                                            {/* Location and user info on hover */}
                                             {!isSelectMode && (
-                                                <div
-                                                    className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    style={{ background: USERS[photo.memory.addedBy].color }}
-                                                >
-                                                    {USERS[photo.memory.addedBy].avatar}
+                                                <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div
+                                                            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0"
+                                                            style={{ background: USERS[photo.memory.addedBy].color }}
+                                                        >
+                                                            {USERS[photo.memory.addedBy].avatar}
+                                                        </div>
+                                                        <span className="text-white text-xs font-medium truncate">
+                                                            {photo.memory.name}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
