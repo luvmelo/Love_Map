@@ -1,7 +1,60 @@
 // Memory Service - CRUD operations for Supabase
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { MemoryRow, MemoryInsert, MemoryUpdate, UserId } from '@/types/database';
+import type { MemoryRow, MemoryInsert, MemoryUpdate, UserId, ReactionRow, ReactionInsert } from '@/types/database';
 import type { Memory } from '@/components/map/memory-markers';
+
+// Reverse geocode coordinates to get country and city
+export async function reverseGeocode(lat: number, lng: number): Promise<{ country?: string; city?: string }> {
+    try {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+            console.warn('Google Maps API key not configured');
+            return {};
+        }
+
+        const response = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&result_type=locality|country`
+        );
+
+        if (!response.ok) {
+            console.error('Geocode request failed:', response.status);
+            return {};
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 'OK' || !data.results?.length) {
+            return {};
+        }
+
+        let country: string | undefined;
+        let city: string | undefined;
+
+        // Parse address components from results
+        for (const result of data.results) {
+            for (const component of result.address_components || []) {
+                if (component.types.includes('country') && !country) {
+                    country = component.long_name;
+                }
+                if ((component.types.includes('locality') || component.types.includes('administrative_area_level_1')) && !city) {
+                    city = component.long_name;
+                }
+            }
+            if (country && city) break;
+        }
+
+        if (country && city) {
+            console.log('📍 Geocoded:', city, country);
+        } else {
+            console.warn('⚠️ Geocoding incomplete:', { city, country, results: data.results?.[0]?.formatted_address });
+        }
+
+        return { country, city };
+    } catch (error) {
+        console.error('Error reverse geocoding:', error);
+        return {};
+    }
+}
 
 // Convert DB row to frontend Memory type
 function rowToMemory(row: MemoryRow): Memory {
@@ -10,10 +63,13 @@ function rowToMemory(row: MemoryRow): Memory {
         name: row.name,
         type: row.type,
         date: row.date,
+        time: row.time || undefined,
         memo: row.memo,
         lat: row.lat,
         lng: row.lng,
         addedBy: row.added_by,
+        country: row.country || undefined,
+        city: row.city || undefined,
         coverPhotoUrl: row.cover_photo_url || undefined,
         photos: row.photos || undefined,
     };
@@ -56,7 +112,7 @@ export async function createMemory(memory: MemoryInsert): Promise<Memory | null>
         .single();
 
     if (error) {
-        console.error('Error creating memory:', error);
+        console.error('Error creating memory:', error.message, error.code, error.details);
         return null;
     }
 
@@ -95,7 +151,7 @@ export async function deleteMemory(id: string): Promise<boolean> {
     const { error } = await supabase.from('memories').delete().eq('id', id);
 
     if (error) {
-        console.error('Error deleting memory:', error);
+        console.error('Error deleting memory:', error.message, error.code, error.details);
         return false;
     }
 
@@ -163,6 +219,13 @@ export async function createMemoryWithPhoto(
     coverPhoto?: File | null,
     additionalPhotos?: File[] | null
 ): Promise<Memory | null> {
+    // Reverse geocode to get country and city
+    if (!memory.country || !memory.city) {
+        const geoData = await reverseGeocode(memory.lat, memory.lng);
+        if (geoData.country) memory.country = geoData.country;
+        if (geoData.city) memory.city = geoData.city;
+    }
+
     // First create the memory
     const created = await createMemory(memory);
     if (!created) return null;
@@ -193,3 +256,68 @@ export async function createMemoryWithPhoto(
     return created;
 }
 
+// ============================================
+// REACTIONS
+// ============================================
+
+// Get all reactions for a memory
+export async function getReactions(memoryId: string): Promise<{ emoji: string; userId: UserId }[]> {
+    if (!isSupabaseConfigured() || !supabase) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from('reactions')
+        .select('emoji, user_id')
+        .eq('memory_id', memoryId);
+
+    if (error) {
+        console.error('Error fetching reactions:', error);
+        return [];
+    }
+
+    return (data || []).map(r => ({ emoji: r.emoji, userId: r.user_id as UserId }));
+}
+
+// Add or update a reaction (upsert - one reaction per user per memory)
+export async function addReaction(memoryId: string, emoji: string, userId: UserId): Promise<boolean> {
+    if (!isSupabaseConfigured() || !supabase) {
+        console.warn('Supabase not configured, cannot add reaction');
+        return false;
+    }
+
+    const { error } = await supabase
+        .from('reactions')
+        .upsert(
+            { memory_id: memoryId, emoji, user_id: userId },
+            { onConflict: 'memory_id,user_id' }
+        );
+
+    if (error) {
+        console.error('Error adding reaction:', error.message, error.code);
+        return false;
+    }
+
+    console.log('✅ Reaction added:', emoji, 'by', userId);
+    return true;
+}
+
+// Remove a reaction
+export async function removeReaction(memoryId: string, userId: UserId): Promise<boolean> {
+    if (!isSupabaseConfigured() || !supabase) {
+        return false;
+    }
+
+    const { error } = await supabase
+        .from('reactions')
+        .delete()
+        .eq('memory_id', memoryId)
+        .eq('user_id', userId);
+
+    if (error) {
+        console.error('Error removing reaction:', error);
+        return false;
+    }
+
+    return true;
+}

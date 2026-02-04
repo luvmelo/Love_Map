@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Camera, Heart, Utensils, Plane, Mountain, X, Edit3, Trash2, Calendar, MapPin, Check, ImagePlus } from 'lucide-react';
-import { Memory } from './memory-markers';
+import { Camera, Heart, Utensils, Plane, Mountain, X, Edit3, Trash2, Calendar, MapPin, Check, ImagePlus, Clock, Share2 } from 'lucide-react';
+import { Memory, User } from './memory-markers';
 import { USERS } from '../../contexts/user-context';
+import { shareMemory } from '@/lib/share-utils';
 
 const FLAGS = [
     { id: 'love', label: 'Love', icon: Heart, color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', fill: 'fill-pink-500' },
@@ -12,19 +13,26 @@ const FLAGS = [
     { id: 'adventure', label: 'Fun', icon: Mountain, color: 'text-green-500', bg: 'bg-green-500/10 border-green-500/20', fill: 'fill-green-500' },
 ];
 
+const REACTION_EMOJIS = ['❤️', '😍', '🥰', '✨', '🔥', '💕', '🎉', '😊'];
+
 interface MemoryDetailModalProps {
     memory: Memory;
+    currentUser: User;
     onClose: () => void;
-    onSave?: (data: Partial<Memory>) => void;
+    onSave?: (data: Partial<Memory> & { coverPhotoFile?: File }) => void;
     onDelete?: (id: string) => void;
+    onReaction?: (memoryId: string, emoji: string) => void;
 }
 
-export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryDetailModalProps) {
+export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDelete, onReaction }: MemoryDetailModalProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedMemo, setEditedMemo] = useState(memory.memo);
     const [editedType, setEditedType] = useState(memory.type);
+    const [editedDate, setEditedDate] = useState(memory.date.split('T')[0]);
+    const [editedTime, setEditedTime] = useState(memory.time || '');
     const [editedPhoto, setEditedPhoto] = useState<File | null>(null);
     const [editedPhotoPreview, setEditedPhotoPreview] = useState<string | null>(memory.coverPhotoUrl || null);
+    const [isSharing, setIsSharing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const config = FLAGS.find(f => f.id === memory.type) || FLAGS[0];
@@ -49,7 +57,9 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
         onSave?.({
             memo: editedMemo,
             type: editedType,
-            coverPhotoUrl: editedPhotoPreview || undefined,
+            date: editedDate,
+            time: editedTime || undefined,
+            coverPhotoFile: editedPhoto || undefined,
         });
         setIsEditing(false);
     };
@@ -57,6 +67,8 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
     const handleCancel = () => {
         setEditedMemo(memory.memo);
         setEditedType(memory.type);
+        setEditedDate(memory.date.split('T')[0]);
+        setEditedTime(memory.time || '');
         setEditedPhoto(null);
         setEditedPhotoPreview(memory.coverPhotoUrl || null);
         setIsEditing(false);
@@ -123,7 +135,10 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
                     )}
                     {/* Close button */}
                     <button
-                        onClick={onClose}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose();
+                        }}
                         className="absolute top-3 right-3 p-2 rounded-full glass hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors z-20"
                     >
                         <X size={18} />
@@ -142,12 +157,43 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
                         </div>
                     </div>
 
-                    {/* Date & User */}
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-full">
-                            <Calendar size={12} />
-                            <span>{new Date(memory.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                        </div>
+                    {/* Date, Time & User */}
+                    <div className="flex items-center gap-2 mb-4 flex-wrap">
+                        {isEditing ? (
+                            <>
+                                <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-full flex-1">
+                                    <Calendar size={12} className="text-gray-400" />
+                                    <input
+                                        type="date"
+                                        value={editedDate}
+                                        onChange={(e) => setEditedDate(e.target.value)}
+                                        className="bg-transparent text-xs text-gray-700 dark:text-gray-300 outline-none w-full"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-full">
+                                    <Clock size={12} className="text-gray-400" />
+                                    <input
+                                        type="time"
+                                        value={editedTime}
+                                        onChange={(e) => setEditedTime(e.target.value)}
+                                        className="bg-transparent text-xs text-gray-700 dark:text-gray-300 outline-none w-16"
+                                    />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-full">
+                                    <Calendar size={12} />
+                                    <span>{new Date(memory.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                </div>
+                                {memory.time && (
+                                    <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-full">
+                                        <Clock size={12} />
+                                        <span>{memory.time}</span>
+                                    </div>
+                                )}
+                            </>
+                        )}
                         <div
                             className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full"
                             style={{ background: userInfo.color + '15', color: userInfo.color }}
@@ -162,7 +208,7 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
                         {isEditing ? (
                             <div className="space-y-4">
                                 {/* Flag Selector for Editing */}
-                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                <div className="flex gap-3 pb-2">
                                     {FLAGS.map((flag) => {
                                         const FlagIcon = flag.icon;
                                         const isSelected = editedType === flag.id;
@@ -170,13 +216,13 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
                                             <button
                                                 key={flag.id}
                                                 onClick={() => setEditedType(flag.id as Memory['type'])}
-                                                className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl border transition-all ${isSelected
-                                                    ? `${flag.bg} ${flag.color} scale-105 shadow-sm`
-                                                    : 'border-transparent hover:bg-gray-50 dark:hover:bg-white/5 text-gray-400'
+                                                className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all ${isSelected
+                                                    ? `${flag.color} bg-current/10`
+                                                    : 'text-gray-400 hover:text-gray-500'
                                                     }`}
                                             >
-                                                <FlagIcon size={18} className={isSelected ? 'fill-current' : ''} />
-                                                <span className="text-[9px] font-medium mt-0.5">{flag.label}</span>
+                                                <FlagIcon size={22} className={isSelected ? 'fill-current' : ''} />
+                                                <span className={`text-[9px] font-medium mt-0.5 ${isSelected ? flag.color : ''}`}>{flag.label}</span>
                                             </button>
                                         );
                                     })}
@@ -197,6 +243,47 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
                             </div>
                         )}
                     </div>
+
+                    {/* Reactions - Glassy emoji picker */}
+                    {!isEditing && (
+                        <div className="space-y-2">
+                            {/* Existing reactions display */}
+                            {memory.reactions && memory.reactions.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {memory.reactions.map((r, i) => (
+                                        <span
+                                            key={i}
+                                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/60 dark:bg-white/10 backdrop-blur-sm rounded-full text-sm shadow-sm border border-white/40 dark:border-white/20"
+                                        >
+                                            <span>{r.emoji}</span>
+                                            <span className="text-xs text-gray-500">{USERS[r.userId].avatar}</span>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Emoji picker */}
+                            <div className="flex gap-1.5 overflow-x-auto py-1 scrollbar-hide">
+                                {REACTION_EMOJIS.map((emoji) => {
+                                    const hasReacted = memory.reactions?.some(
+                                        r => r.emoji === emoji && r.userId === currentUser
+                                    );
+                                    return (
+                                        <button
+                                            key={emoji}
+                                            onClick={() => onReaction?.(memory.id, emoji)}
+                                            className={`p-2 rounded-xl transition-all hover:scale-110 active:scale-95 ${hasReacted
+                                                ? 'bg-pink-500/20 ring-2 ring-pink-500/40'
+                                                : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'
+                                                }`}
+                                        >
+                                            <span className="text-lg">{emoji}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Action Buttons */}
                     <div className="flex gap-2">
@@ -224,6 +311,18 @@ export function MemoryDetailModal({ memory, onClose, onSave, onDelete }: MemoryD
                                     title="Delete memory"
                                 >
                                     <Trash2 size={18} />
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        setIsSharing(true);
+                                        await shareMemory(memory);
+                                        setIsSharing(false);
+                                    }}
+                                    disabled={isSharing}
+                                    className="p-2.5 rounded-xl hover:bg-blue-500/10 text-gray-400 hover:text-blue-500 transition-colors disabled:opacity-50"
+                                    title="Share memory"
+                                >
+                                    <Share2 size={18} className={isSharing ? 'animate-pulse' : ''} />
                                 </button>
                                 <button
                                     onClick={() => setIsEditing(true)}

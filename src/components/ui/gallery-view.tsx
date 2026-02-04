@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { X, MapPin, ChevronLeft, ChevronRight, Trash2, Check, Camera } from 'lucide-react';
-import { Memory } from '../map/memory-markers';
+import { useState, useMemo } from 'react';
+import { X, MapPin, ChevronLeft, ChevronRight, Trash2, Check, Camera, Filter, User, Globe, Calendar } from 'lucide-react';
+import { Memory, User as UserType } from '../map/memory-markers';
 import { USERS } from '../../contexts/user-context';
 
 interface GalleryViewProps {
@@ -36,10 +36,50 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
     const [isSelectMode, setIsSelectMode] = useState(false);
     const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
 
+    // Filter state
+    const [showFilters, setShowFilters] = useState(false);
+    const [personFilter, setPersonFilter] = useState<UserType | null>(null);
+    const [countryFilter, setCountryFilter] = useState<string | null>(null);
+    const [yearFilter, setYearFilter] = useState<string | null>(null);
+
     if (!isOpen) return null;
 
-    // Collect all photos from all memories
-    const allPhotos = memories.flatMap(getMemoryPhotos);
+    // Get unique countries and years from memories
+    const countries = useMemo(() => {
+        const set = new Set<string>();
+        memories.forEach(m => m.country && set.add(m.country));
+        return Array.from(set).sort();
+    }, [memories]);
+
+    const years = useMemo(() => {
+        const set = new Set<string>();
+        memories.forEach(m => {
+            const year = new Date(m.date).getFullYear().toString();
+            set.add(year);
+        });
+        return Array.from(set).sort().reverse();
+    }, [memories]);
+
+    // Filter memories based on selected filters
+    const filteredMemories = useMemo(() => {
+        return memories.filter(m => {
+            if (personFilter && m.addedBy !== personFilter) return false;
+            if (countryFilter && m.country !== countryFilter) return false;
+            if (yearFilter && new Date(m.date).getFullYear().toString() !== yearFilter) return false;
+            return true;
+        });
+    }, [memories, personFilter, countryFilter, yearFilter]);
+
+    // Collect all photos from filtered memories
+    const allPhotos = filteredMemories.flatMap(getMemoryPhotos);
+
+    const hasActiveFilters = personFilter || countryFilter || yearFilter;
+
+    const clearFilters = () => {
+        setPersonFilter(null);
+        setCountryFilter(null);
+        setYearFilter(null);
+    };
 
     // Handle navigation in lightbox
     const handlePrev = () => {
@@ -118,9 +158,22 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
                     <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
                         <div>
                             <h2 className="text-lg font-semibold">Gallery</h2>
-                            <p className="text-xs text-gray-500">{allPhotos.length} photo{allPhotos.length !== 1 ? 's' : ''}</p>
+                            <p className="text-xs text-gray-500">
+                                {allPhotos.length} photo{allPhotos.length !== 1 ? 's' : ''}
+                                {hasActiveFilters && ` (filtered)`}
+                            </p>
                         </div>
                         <div className="flex items-center gap-2">
+                            {/* Filter Toggle */}
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${showFilters || hasActiveFilters
+                                        ? 'bg-blue-500/10 text-blue-500'
+                                        : 'hover:bg-black/10 dark:hover:bg-white/10 text-gray-500'
+                                    }`}
+                            >
+                                <Filter size={16} />
+                            </button>
                             {/* Select Mode Toggle */}
                             {allPhotos.length > 0 && (
                                 isSelectMode ? (
@@ -158,6 +211,99 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
                             </button>
                         </div>
                     </div>
+
+                    {/* Filter Panel */}
+                    {showFilters && (
+                        <div className="px-5 py-3 border-b border-white/10 bg-black/5 dark:bg-white/5 space-y-3">
+                            {/* Person Filter */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs text-gray-500 w-14">Person</span>
+                                <button
+                                    onClick={() => setPersonFilter(null)}
+                                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${!personFilter ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-800' : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400'
+                                        }`}
+                                >
+                                    All
+                                </button>
+                                {(['melo', 'may'] as UserType[]).map(user => (
+                                    <button
+                                        key={user}
+                                        onClick={() => setPersonFilter(personFilter === user ? null : user)}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-colors ${personFilter === user
+                                                ? 'ring-1 ring-current'
+                                                : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400'
+                                            }`}
+                                        style={personFilter === user ? { background: USERS[user].color + '20', color: USERS[user].color } : {}}
+                                    >
+                                        <span>{USERS[user].avatar}</span>
+                                        {USERS[user].name}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Country Filter */}
+                            {countries.length > 0 && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-gray-500 w-14">Country</span>
+                                    <button
+                                        onClick={() => setCountryFilter(null)}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${!countryFilter ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-800' : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400'
+                                            }`}
+                                    >
+                                        All
+                                    </button>
+                                    {countries.map(country => (
+                                        <button
+                                            key={country}
+                                            onClick={() => setCountryFilter(countryFilter === country ? null : country)}
+                                            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${countryFilter === country
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-black/30'
+                                                }`}
+                                        >
+                                            {country}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Year Filter */}
+                            {years.length > 0 && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-gray-500 w-14">Year</span>
+                                    <button
+                                        onClick={() => setYearFilter(null)}
+                                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${!yearFilter ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-800' : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400'
+                                            }`}
+                                    >
+                                        All
+                                    </button>
+                                    {years.map(year => (
+                                        <button
+                                            key={year}
+                                            onClick={() => setYearFilter(yearFilter === year ? null : year)}
+                                            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${yearFilter === year
+                                                    ? 'bg-green-500 text-white'
+                                                    : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-black/30'
+                                                }`}
+                                        >
+                                            {year}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Clear Filters */}
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={clearFilters}
+                                    className="text-xs text-blue-500 hover:text-blue-600 font-medium"
+                                >
+                                    Clear all filters
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">

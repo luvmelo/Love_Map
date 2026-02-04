@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Camera, Heart, Utensils, Plane, Mountain, X, ImagePlus } from 'lucide-react';
+import { Camera, Heart, Utensils, Plane, Mountain, X, ImagePlus, Calendar, Clock } from 'lucide-react';
 import { useMapsLibrary, useMap } from '@vis.gl/react-google-maps';
 
 interface AddMemoryModalProps {
@@ -27,6 +27,9 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
     const [isLoadingName, setIsLoadingName] = useState(!placeName);
     const [photos, setPhotos] = useState<File[]>([]);
     const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+    // Date and time state
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedTime, setSelectedTime] = useState(new Date().toTimeString().slice(0, 5));
     const fileInputRef = useRef<HTMLInputElement>(null);
     const geocodingLib = useMapsLibrary('geocoding');
     const placesLib = useMapsLibrary('places');
@@ -308,8 +311,30 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
                         </button>
                     </div>
 
+                    {/* Date & Time Picker */}
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-3 py-2 rounded-full flex-1">
+                            <Calendar size={14} className="text-gray-400" />
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="bg-transparent text-xs font-medium text-gray-700 dark:text-gray-300 outline-none flex-1 cursor-pointer"
+                            />
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-3 py-2 rounded-full">
+                            <Clock size={14} className="text-gray-400" />
+                            <input
+                                type="time"
+                                value={selectedTime}
+                                onChange={(e) => setSelectedTime(e.target.value)}
+                                className="bg-transparent text-xs font-medium text-gray-700 dark:text-gray-300 outline-none w-16 cursor-pointer"
+                            />
+                        </div>
+                    </div>
+
                     {/* Flag Selector */}
-                    <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                    <div className="flex gap-3 mb-4">
                         {FLAGS.map((flag) => {
                             const Icon = flag.icon;
                             const isSelected = selectedFlag === flag.id;
@@ -317,13 +342,13 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
                                 <button
                                     key={flag.id}
                                     onClick={() => setSelectedFlag(flag.id)}
-                                    className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl border transition-all ${isSelected
-                                        ? `${flag.bg} ${flag.color} scale-105 shadow-sm`
-                                        : 'border-transparent hover:bg-gray-50 dark:hover:bg-white/5 text-gray-400'
+                                    className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all ${isSelected
+                                        ? `${flag.color}`
+                                        : 'text-gray-400 hover:text-gray-500'
                                         }`}
                                 >
-                                    <Icon size={20} className={isSelected ? 'fill-current' : ''} />
-                                    <span className="text-[10px] font-medium mt-1">{flag.label}</span>
+                                    <Icon size={24} className={isSelected ? 'fill-current' : ''} />
+                                    <span className={`text-[10px] font-medium mt-1 ${isSelected ? flag.color : ''}`}>{flag.label}</span>
                                 </button>
                             );
                         })}
@@ -354,7 +379,8 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
                                 memo,
                                 type: selectedFlag,
                                 locationName,
-                                date: new Date().toISOString().split('T')[0],
+                                date: selectedDate,
+                                time: selectedTime,
                                 coverPhoto: photos[0] || null,  // First photo as cover
                                 additionalPhotos: photos.slice(1),  // Rest as additional
                             })}

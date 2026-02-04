@@ -8,13 +8,17 @@ import { MemoryDetailModal } from './memory-detail-modal';
 import { MemoryMarkers, Memory, User } from './memory-markers';
 import { MemorySidebar } from '../ui/memory-sidebar';
 import { GalleryView } from '../ui/gallery-view';
+import { StatsView } from '../ui/stats-view';
+import { AnniversaryBanner } from '../ui/anniversary-banner';
 import { useUser, USERS } from '../../contexts/user-context';
-import { Menu, Home, Plus, Users, Images } from 'lucide-react';
+import { Menu, Home, Plus, Users, Images, BarChart3 } from 'lucide-react';
 import {
     getMemories,
     createMemoryWithPhoto,
     updateMemory,
-    deleteMemory
+    deleteMemory,
+    uploadCoverPhoto,
+    addReaction
 } from '@/lib/memory-service';
 
 const DEFAULT_CENTER = { lat: 35.6762, lng: 139.6503 }; // Tokyo
@@ -48,6 +52,8 @@ interface MapControlsProps {
     setIsUserMenuOpen: (open: boolean) => void;
     isGalleryOpen: boolean;
     setIsGalleryOpen: (open: boolean) => void;
+    isStatsOpen: boolean;
+    setIsStatsOpen: (open: boolean) => void;
     userInfo: typeof USERS[keyof typeof USERS];
     currentUser: User;
     switchUser: (user: User) => void;
@@ -58,6 +64,7 @@ function MapControls({
     isAddMode, setIsAddMode,
     isUserMenuOpen, setIsUserMenuOpen,
     isGalleryOpen, setIsGalleryOpen,
+    isStatsOpen, setIsStatsOpen,
     userInfo, currentUser, switchUser
 }: MapControlsProps) {
     const map = useMap();
@@ -160,6 +167,18 @@ function MapControls({
                     <Images size={20} />
                 </button>
 
+                {/* Stats Button */}
+                <button
+                    onClick={() => setIsStatsOpen(true)}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isStatsOpen
+                        ? 'bg-pink-500/10 text-pink-500'
+                        : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'
+                        }`}
+                    title="Stats Dashboard"
+                >
+                    <BarChart3 size={20} />
+                </button>
+
                 {/* User Switcher Button */}
                 <div className="relative">
                     <button
@@ -257,6 +276,7 @@ export default function LoveMap() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+    const [isStatsOpen, setIsStatsOpen] = useState(false);
     const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string; placeId?: string } | null>(null);
     const [lastSearchedPlace, setLastSearchedPlace] = useState<google.maps.places.PlaceResult | null>(null);
     const [memories, setMemories] = useState<Memory[]>([]);
@@ -265,6 +285,7 @@ export default function LoveMap() {
     const [isLoading, setIsLoading] = useState(true);
     const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number; memory: Memory } | null>(null);
     const [pendingMemoryDetail, setPendingMemoryDetail] = useState<Memory | null>(null);
+    const [isAnniversaryDismissed, setIsAnniversaryDismissed] = useState(false);
 
     // Load memories from Supabase on mount
     useEffect(() => {
@@ -352,6 +373,8 @@ export default function LoveMap() {
                     setIsUserMenuOpen={setIsUserMenuOpen}
                     isGalleryOpen={isGalleryOpen}
                     setIsGalleryOpen={setIsGalleryOpen}
+                    isStatsOpen={isStatsOpen}
+                    setIsStatsOpen={setIsStatsOpen}
                     userInfo={userInfo}
                     currentUser={currentUser}
                     switchUser={switchUser}
@@ -376,6 +399,25 @@ export default function LoveMap() {
                 onUserFilterChange={setUserFilter}
                 onMemoryClick={(memory) => setSelectedMemory(memory)}
             />
+
+            {/* Stats Dashboard */}
+            <StatsView
+                isOpen={isStatsOpen}
+                onClose={() => setIsStatsOpen(false)}
+                memories={memories}
+            />
+
+            {/* Anniversary Banner */}
+            {!isAnniversaryDismissed && (
+                <AnniversaryBanner
+                    memories={memories}
+                    onClose={() => setIsAnniversaryDismissed(true)}
+                    onMemoryClick={(memory) => {
+                        setIsAnniversaryDismissed(true);
+                        setSelectedMemory(memory);
+                    }}
+                />
+            )}
 
             {/* Creation Modal */}
             {tempMarker && (
@@ -433,17 +475,29 @@ export default function LoveMap() {
                     memory={selectedMemory}
                     onClose={() => setSelectedMemory(null)}
                     onSave={async (updates) => {
+                        // Upload photo file if provided
+                        let coverPhotoUrl = undefined;
+                        if (updates.coverPhotoFile) {
+                            coverPhotoUrl = await uploadCoverPhoto(updates.coverPhotoFile, selectedMemory.id);
+                            if (coverPhotoUrl) {
+                                console.log('✅ Cover photo uploaded:', coverPhotoUrl);
+                            }
+                        }
+
                         // Update in Supabase
                         const updated = await updateMemory(selectedMemory.id, {
                             memo: updates.memo,
                             type: updates.type,
-                            cover_photo_url: updates.coverPhotoUrl,
+                            date: updates.date,
+                            time: updates.time,
+                            ...(coverPhotoUrl && { cover_photo_url: coverPhotoUrl }),
                         });
 
                         if (updated) {
                             setMemories(prev => prev.map(m =>
                                 m.id === selectedMemory.id ? updated : m
                             ));
+                            setSelectedMemory(updated);
                             console.log('✅ Memory updated in Supabase:', updated);
                         } else {
                             // Fallback: update locally
@@ -452,7 +506,6 @@ export default function LoveMap() {
                             ));
                             console.log('⚠️ Updated locally');
                         }
-                        setSelectedMemory(null);
                     }}
                     onDelete={async (id) => {
                         // Delete from Supabase
@@ -464,6 +517,27 @@ export default function LoveMap() {
                         }
                         setMemories(prev => prev.filter(m => m.id !== id));
                         setSelectedMemory(null);
+                    }}
+                    currentUser={currentUser}
+                    onReaction={async (memoryId, emoji) => {
+                        const success = await addReaction(memoryId, emoji, currentUser);
+                        if (success) {
+                            // Update local state with new reaction
+                            setMemories(prev => prev.map(m => {
+                                if (m.id === memoryId) {
+                                    const existingReactions = m.reactions || [];
+                                    const filteredReactions = existingReactions.filter(r => r.userId !== currentUser);
+                                    return { ...m, reactions: [...filteredReactions, { emoji, userId: currentUser }] };
+                                }
+                                return m;
+                            }));
+                            // Also update selectedMemory so modal reflects change
+                            if (selectedMemory && selectedMemory.id === memoryId) {
+                                const existingReactions = selectedMemory.reactions || [];
+                                const filteredReactions = existingReactions.filter(r => r.userId !== currentUser);
+                                setSelectedMemory({ ...selectedMemory, reactions: [...filteredReactions, { emoji, userId: currentUser }] });
+                            }
+                        }
                     }}
                 />
             )}

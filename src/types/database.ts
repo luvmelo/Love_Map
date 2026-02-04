@@ -8,10 +8,13 @@ export interface MemoryRow {
     name: string
     type: MemoryType
     date: string
+    time?: string | null
     memo: string
     lat: number
     lng: number
     added_by: UserId
+    country?: string | null
+    city?: string | null
     cover_photo_url?: string | null
     photos?: string[] | null  // Array of photo URLs for multi-image support
     created_at: string
@@ -22,10 +25,13 @@ export interface MemoryInsert {
     name: string
     type: MemoryType
     date?: string
+    time?: string | null
     memo: string
     lat: number
     lng: number
     added_by: UserId
+    country?: string | null
+    city?: string | null
     cover_photo_url?: string | null
     photos?: string[] | null
 }
@@ -34,9 +40,27 @@ export interface MemoryUpdate {
     name?: string
     type?: MemoryType
     date?: string
+    time?: string | null
     memo?: string
+    country?: string | null
+    city?: string | null
     cover_photo_url?: string | null
     photos?: string[] | null
+}
+
+// Reaction types for memory reactions
+export interface ReactionRow {
+    id: string
+    memory_id: string
+    user_id: UserId
+    emoji: string
+    created_at: string
+}
+
+export interface ReactionInsert {
+    memory_id: string
+    user_id: UserId
+    emoji: string
 }
 
 // Database schema type for Supabase client
@@ -47,6 +71,12 @@ export interface Database {
                 Row: MemoryRow
                 Insert: MemoryInsert
                 Update: MemoryUpdate
+                Relationships: []
+            }
+            reactions: {
+                Row: ReactionRow
+                Insert: ReactionInsert
+                Update: Partial<ReactionInsert>
                 Relationships: []
             }
         }

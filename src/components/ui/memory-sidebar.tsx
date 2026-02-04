@@ -38,11 +38,11 @@ export function MemorySidebar({
         return matchesType && matchesUser;
     });
 
-    // Stats
+    // Stats - calculate unique countries and cities from memories
     const stats = {
         total: filteredMemories.length,
-        countries: 1, // Would calculate from real data
-        cities: 1,
+        countries: new Set(filteredMemories.map(m => m.country).filter(Boolean)).size,
+        cities: new Set(filteredMemories.map(m => m.city).filter(Boolean)).size,
     };
 
     if (!isOpen) return null;
@@ -99,8 +99,8 @@ export function MemorySidebar({
                         <button
                             onClick={() => onUserFilterChange(null)}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${userFilter === null
-                                    ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-800'
-                                    : 'bg-black/5 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'
+                                ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-800'
+                                : 'bg-black/5 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'
                                 }`}
                         >
                             All
@@ -112,8 +112,8 @@ export function MemorySidebar({
                                     key={user}
                                     onClick={() => onUserFilterChange(isActive ? null : user)}
                                     className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all ${isActive
-                                            ? 'ring-1 ring-current'
-                                            : 'bg-black/5 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'
+                                        ? 'ring-1 ring-current'
+                                        : 'bg-black/5 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10'
                                         }`}
                                     style={isActive ? {
                                         background: USERS[user].color + '15',

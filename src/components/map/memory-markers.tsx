@@ -13,12 +13,16 @@ export interface Memory {
     name: string;
     type: 'love' | 'food' | 'travel' | 'adventure';
     date: string;
+    time?: string;
     memo: string;
     lat: number;
     lng: number;
     addedBy: User;
+    country?: string;
+    city?: string;
     coverPhotoUrl?: string;
     photos?: string[];  // Array of photo URLs for multi-image support
+    reactions?: { emoji: string; userId: User }[];  // Emoji reactions from users
 }
 
 // Pin colors matching your design system
