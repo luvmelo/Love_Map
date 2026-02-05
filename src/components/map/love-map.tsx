@@ -8,7 +8,6 @@ import { MemoryDetailModal } from './memory-detail-modal';
 import { MemoryMarkers, Memory, User } from './memory-markers';
 import { MemorySidebar } from '../ui/memory-sidebar';
 import { GalleryView } from '../ui/gallery-view';
-import { StatsView } from '../ui/stats-view';
 import { AnniversaryBanner } from '../ui/anniversary-banner';
 import { useUser, USERS } from '../../contexts/user-context';
 import { Menu, Home, Plus, Users, Images, BarChart3 } from 'lucide-react';
@@ -52,8 +51,6 @@ interface MapControlsProps {
     setIsUserMenuOpen: (open: boolean) => void;
     isGalleryOpen: boolean;
     setIsGalleryOpen: (open: boolean) => void;
-    isStatsOpen: boolean;
-    setIsStatsOpen: (open: boolean) => void;
     userInfo: typeof USERS[keyof typeof USERS];
     currentUser: User;
     switchUser: (user: User) => void;
@@ -64,7 +61,6 @@ function MapControls({
     isAddMode, setIsAddMode,
     isUserMenuOpen, setIsUserMenuOpen,
     isGalleryOpen, setIsGalleryOpen,
-    isStatsOpen, setIsStatsOpen,
     userInfo, currentUser, switchUser
 }: MapControlsProps) {
     const map = useMap();
@@ -167,23 +163,11 @@ function MapControls({
                     <Images size={20} />
                 </button>
 
-                {/* Stats Button */}
-                <button
-                    onClick={() => setIsStatsOpen(true)}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isStatsOpen
-                        ? 'bg-pink-500/10 text-pink-500'
-                        : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'
-                        }`}
-                    title="Stats Dashboard"
-                >
-                    <BarChart3 size={20} />
-                </button>
-
                 {/* User Switcher Button */}
                 <div className="relative">
                     <button
                         onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                        className="glass w-10 h-10 rounded-full flex items-center justify-center shadow-lg overflow-hidden transition-all hover:scale-105 hover:shadow-xl"
+                        className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden transition-all hover:bg-black/5 dark:hover:bg-white/10"
                     >
                         <span className="text-lg">{userInfo.avatar}</span>
                     </button>
@@ -276,7 +260,6 @@ export default function LoveMap() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-    const [isStatsOpen, setIsStatsOpen] = useState(false);
     const [tempMarker, setTempMarker] = useState<{ lat: number; lng: number; name?: string; placeId?: string } | null>(null);
     const [lastSearchedPlace, setLastSearchedPlace] = useState<google.maps.places.PlaceResult | null>(null);
     const [memories, setMemories] = useState<Memory[]>([]);
@@ -373,8 +356,6 @@ export default function LoveMap() {
                     setIsUserMenuOpen={setIsUserMenuOpen}
                     isGalleryOpen={isGalleryOpen}
                     setIsGalleryOpen={setIsGalleryOpen}
-                    isStatsOpen={isStatsOpen}
-                    setIsStatsOpen={setIsStatsOpen}
                     userInfo={userInfo}
                     currentUser={currentUser}
                     switchUser={switchUser}
@@ -398,13 +379,6 @@ export default function LoveMap() {
                 userFilter={userFilter}
                 onUserFilterChange={setUserFilter}
                 onMemoryClick={(memory) => setSelectedMemory(memory)}
-            />
-
-            {/* Stats Dashboard */}
-            <StatsView
-                isOpen={isStatsOpen}
-                onClose={() => setIsStatsOpen(false)}
-                memories={memories}
             />
 
             {/* Anniversary Banner */}
