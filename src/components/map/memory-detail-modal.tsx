@@ -7,6 +7,7 @@ import { USERS } from '../../contexts/user-context';
 import { shareMemory } from '@/lib/share-utils';
 import { TimePicker } from '../ui/time-picker';
 import { DatePicker } from '../ui/date-picker';
+import { formatDateDisplay } from '@/lib/date-utils';
 
 const FLAGS = [
     { id: 'love', label: 'Love', icon: Heart, color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', fill: 'fill-pink-500' },
@@ -180,7 +181,7 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
                             <>
                                 <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-full">
                                     <Calendar size={12} />
-                                    <span>{new Date(memory.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                    <span>{formatDateDisplay(memory.date)}</span>
                                 </div>
                                 {memory.time && (
                                     <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-full">

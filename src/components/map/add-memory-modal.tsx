@@ -41,18 +41,59 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
     const MAX_PHOTOS = 6;
 
     // Handle file selection for photos (supports multiple)
-    const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files) return;
 
-        const newFiles = Array.from(files).slice(0, MAX_PHOTOS - photos.length);
-        if (newFiles.length === 0) return;
+        const rawFiles = Array.from(files).slice(0, MAX_PHOTOS - photos.length);
+        if (rawFiles.length === 0) return;
+
+        const processedFiles: File[] = [];
+
+        // Dynamic import to avoid SSR issues with heic2any
+        const heic2any = (await import('heic2any')).default;
+
+        for (const file of rawFiles) {
+            const isHeic = file.type === 'image/heic' ||
+                file.type === 'image/heif' ||
+                file.name.toLowerCase().endsWith('.heic') ||
+                file.name.toLowerCase().endsWith('.heif');
+
+            if (isHeic) {
+                try {
+                    console.log('Converting HEIC file:', file.name);
+                    // heic2any returns a Blob or Blob[]
+                    const convertedBlob = await heic2any({
+                        blob: file,
+                        toType: 'image/jpeg',
+                        quality: 0.8
+                    });
+
+                    const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+
+                    const newFile = new File(
+                        [blob],
+                        file.name.replace(/\.(heic|heif)$/i, '.jpg'),
+                        { type: 'image/jpeg' }
+                    );
+                    processedFiles.push(newFile);
+                    console.log('Conversion successful:', newFile.name);
+                } catch (err) {
+                    console.error('HEIC conversion failed for', file.name, err);
+                    alert(`Could not convert image ${file.name}. Please try a standard JPEG/PNG.`);
+                    // Do NOT fall back to original HEIC as it will likely fail RLS upload policy
+                    // processedFiles.push(file); 
+                }
+            } else {
+                processedFiles.push(file);
+            }
+        }
 
         // Add to existing photos
-        setPhotos(prev => [...prev, ...newFiles]);
+        setPhotos(prev => [...prev, ...processedFiles]);
 
         // Create preview URLs for new files
-        newFiles.forEach(file => {
+        processedFiles.forEach(file => {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setPhotoPreviews(prev => [...prev, reader.result as string]);
@@ -252,7 +293,7 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
                     type="file"
                     ref={fileInputRef}
                     onChange={handlePhotoSelect}
-                    accept="image/*"
+                    accept="image/*, .heic, .heif"
                     multiple
                     className="hidden"
                 />

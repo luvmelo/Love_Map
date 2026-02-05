@@ -13,8 +13,19 @@ export function DatePicker({ value, onChange, className = '' }: DatePickerProps)
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
+    // Helper to parse YYYY-MM-DD as local date to avoid timezone shifts
+    const parseLocalDate = (dateStr: string) => {
+        if (!dateStr) return new Date();
+        // Handle "YYYY-MM-DD" manually to ensure local time construction
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+        return new Date(dateStr);
+    };
+
     // Parse current value or use today
-    const selectedDate = value ? new Date(value) : new Date();
+    const selectedDate = value ? parseLocalDate(value) : new Date();
 
     // State for the calendar view (month/year)
     const [viewDate, setViewDate] = useState(new Date(selectedDate));
@@ -29,6 +40,13 @@ export function DatePicker({ value, onChange, className = '' }: DatePickerProps)
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Update view date when value changes externally
+    useEffect(() => {
+        if (value) {
+            setViewDate(parseLocalDate(value));
+        }
+    }, [value]);
 
     // Calendar logic
     const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
@@ -54,7 +72,12 @@ export function DatePicker({ value, onChange, className = '' }: DatePickerProps)
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const isSelected = value === dateStr;
-            const isToday = new Date().toISOString().split('T')[0] === dateStr;
+
+            // Check if today (local comparison)
+            const today = new Date();
+            const isToday = today.getFullYear() === currentYear &&
+                today.getMonth() === currentMonth &&
+                today.getDate() === day;
 
             days.push(
                 <button
@@ -101,7 +124,7 @@ export function DatePicker({ value, onChange, className = '' }: DatePickerProps)
                         : 'border-transparent text-gray-800 dark:text-white'
                     }`}
             >
-                {value ? new Date(value).toLocaleDateString(undefined, {
+                {value ? parseLocalDate(value).toLocaleDateString(undefined, {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric'

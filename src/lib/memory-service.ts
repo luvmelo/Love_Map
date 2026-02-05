@@ -27,20 +27,46 @@ export async function reverseGeocode(lat: number, lng: number): Promise<{ countr
             return {};
         }
 
+        if (data.status !== 'OK' || !data.results?.length) {
+            return {};
+        }
+
         let country: string | undefined;
         let city: string | undefined;
 
-        // Parse address components from results
+        // Iterate through results to find the most specific components
+        // Results are usually ordered by specific to general, but we should look at types carefully
+
+        // Find country first
         for (const result of data.results) {
-            for (const component of result.address_components || []) {
-                if (component.types.includes('country') && !country) {
-                    country = component.long_name;
-                }
-                if ((component.types.includes('locality') || component.types.includes('administrative_area_level_1')) && !city) {
-                    city = component.long_name;
-                }
+            const countryComp = result.address_components.find((c: any) => c.types.includes('country'));
+            if (countryComp) {
+                country = countryComp.long_name;
+                break;
             }
-            if (country && city) break;
+        }
+
+        // Find city - prioritize locality > sublocality > administrative_area_level_2 (county)
+        // We avoid administrative_area_level_1 (State/Province) as it's too broad for "City"
+        for (const result of data.results) {
+            const locality = result.address_components.find((c: any) => c.types.includes('locality'));
+            const sublocality = result.address_components.find((c: any) => c.types.includes('sublocality') || c.types.includes('sublocality_level_1'));
+            const town = result.address_components.find((c: any) => c.types.includes('postal_town'));
+
+            if (locality) {
+                city = locality.long_name;
+                break;
+            }
+            if (sublocality && !city) {
+                city = sublocality.long_name;
+                // Don't break yet, keep looking for locality in other results just in case, 
+                // but usually first result is best. Actually, let's break if we find a good candidate.
+                break;
+            }
+            if (town && !city) {
+                city = town.long_name;
+                break;
+            }
         }
 
         if (country && city) {
@@ -169,9 +195,14 @@ export async function uploadCoverPhoto(file: File, memoryId: string): Promise<st
     const fileName = `${memoryId}.${fileExt}`;
     const filePath = `covers/${fileName}`;
 
+    console.log(`Uploading cover photo: ${filePath}, Type: ${file.type}, Size: ${file.size}`);
+
     const { error: uploadError } = await supabase.storage
         .from('memory-photos')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, {
+            upsert: true,
+            contentType: file.type // Explicitly set content type to avoid sniffing errors
+        });
 
     if (uploadError) {
         console.error('Error uploading cover photo:', uploadError);
@@ -196,9 +227,14 @@ export async function uploadPhotos(files: File[], memoryId: string): Promise<str
         const fileName = `${memoryId}_${index}_${timestamp}.${fileExt}`;
         const filePath = `photos/${fileName}`;
 
+        console.log(`Uploading photo ${index}: ${filePath}, Type: ${file.type}, Size: ${file.size}`);
+
         const { error: uploadError } = await supabase!.storage
             .from('memory-photos')
-            .upload(filePath, file, { upsert: true });
+            .upload(filePath, file, {
+                upsert: true,
+                contentType: file.type // Explicitly set content type
+            });
 
         if (uploadError) {
             console.error(`Error uploading photo ${index}:`, uploadError);

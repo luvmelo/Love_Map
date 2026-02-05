@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { Heart, Utensils, Plane, Mountain, X, Calendar, MapPin, Filter, ChevronRight, Users, TrendingUp, Camera, Globe, BarChart3, List } from 'lucide-react';
+import { DatePicker } from '../ui/date-picker';
+import { formatDateDisplay } from '@/lib/date-utils';
 import { Memory, User } from '../map/memory-markers';
 import { USERS } from '../../contexts/user-context';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,6 +64,11 @@ export function MemorySidebar({
             return acc;
         }, {} as Record<string, number>);
 
+        const byCity = memories.reduce((acc, m) => {
+            if (m.city) acc[m.city] = (acc[m.city] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
         const byYear = memories.reduce((acc, m) => {
             const year = new Date(m.date).getFullYear();
             acc[year] = (acc[year] || 0) + 1;
@@ -81,11 +88,13 @@ export function MemorySidebar({
             total: memories.length,
             byType,
             byCountry,
+            byCity,
             byYear,
             totalPhotos,
             topCountry,
             favoriteType,
             countriesCount: Object.keys(byCountry).length,
+            citiesCount: Object.keys(byCity).length,
         };
     }, [memories]);
 
@@ -257,7 +266,7 @@ export function MemorySidebar({
                                                             <div className="flex items-center gap-2 mt-1.5">
                                                                 <div className="flex items-center gap-1 text-[10px] text-gray-400">
                                                                     <Calendar size={10} />
-                                                                    <span>{new Date(memory.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                                                    <span>{formatDateDisplay(memory.date)}</span>
                                                                 </div>
                                                                 <span
                                                                     className="text-[10px] px-1.5 py-0.5 rounded-full"
@@ -315,9 +324,9 @@ export function MemorySidebar({
                                                 <div className="text-[10px] text-gray-500 uppercase font-medium">Countries</div>
                                             </div>
                                             <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center transition-colors hover:bg-black/10 dark:hover:bg-white/10">
-                                                <Camera size={20} className="mx-auto mb-1.5 text-gray-500 dark:text-gray-400" />
-                                                <div className="text-xl font-bold text-gray-800 dark:text-white">{stats.totalPhotos}</div>
-                                                <div className="text-[10px] text-gray-500 uppercase font-medium">Photos</div>
+                                                <MapPin size={20} className="mx-auto mb-1.5 text-gray-500 dark:text-gray-400" />
+                                                <div className="text-xl font-bold text-gray-800 dark:text-white">{stats.citiesCount}</div>
+                                                <div className="text-[10px] text-gray-500 uppercase font-medium">Cities</div>
                                             </div>
                                         </div>
 
