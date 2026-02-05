@@ -1,7 +1,7 @@
 'use client';
 
 import { useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, MapPin } from 'lucide-react';
 
 interface SearchBoxProps {
@@ -18,6 +18,7 @@ export function SearchBox({ onPlaceSelect }: SearchBoxProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [autocompleteService, setAutocompleteService] = useState<google.maps.places.AutocompleteService | null>(null);
     const [placesService, setPlacesService] = useState<google.maps.places.PlacesService | null>(null);
+    const shouldSkipSearch = useRef(false);
 
     // Initialize Services
     useEffect(() => {
@@ -29,6 +30,13 @@ export function SearchBox({ onPlaceSelect }: SearchBoxProps) {
     // Handle Input Change
     useEffect(() => {
         if (!autocompleteService || !inputValue) {
+            setPredictions([]);
+            return;
+        }
+
+        // Skip search if the input change was triggered by a selection
+        if (shouldSkipSearch.current) {
+            shouldSkipSearch.current = false;
             setPredictions([]);
             return;
         }
@@ -59,6 +67,7 @@ export function SearchBox({ onPlaceSelect }: SearchBoxProps) {
         placesService.getDetails({ placeId }, (place, status) => {
             if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry?.location) {
                 // Update input to show full name
+                shouldSkipSearch.current = true;
                 setInputValue(place.name || '');
                 setPredictions([]); // Clear dropdown
 

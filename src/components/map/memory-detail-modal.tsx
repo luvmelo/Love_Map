@@ -161,23 +161,29 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
                     <div className="flex items-center gap-2 mb-4 flex-wrap">
                         {isEditing ? (
                             <>
-                                <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-full flex-1">
-                                    <Calendar size={12} className="text-gray-400" />
-                                    <input
-                                        type="date"
-                                        value={editedDate}
-                                        onChange={(e) => setEditedDate(e.target.value)}
-                                        className="bg-transparent text-xs text-gray-700 dark:text-gray-300 outline-none w-full"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-full">
-                                    <Clock size={12} className="text-gray-400" />
-                                    <input
-                                        type="time"
-                                        value={editedTime}
-                                        onChange={(e) => setEditedTime(e.target.value)}
-                                        className="bg-transparent text-xs text-gray-700 dark:text-gray-300 outline-none w-16"
-                                    />
+                                <div className="flex items-center gap-3 w-full">
+                                    <div className="relative flex-1 group">
+                                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400 group-focus-within:text-gray-800 dark:group-focus-within:text-white transition-colors">
+                                            <Calendar size={16} />
+                                        </div>
+                                        <input
+                                            type="date"
+                                            value={editedDate}
+                                            onChange={(e) => setEditedDate(e.target.value)}
+                                            className="w-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-white/20 dark:focus:bg-black/20 backdrop-blur-md rounded-2xl py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-800 dark:text-white outline-none border border-transparent focus:border-white/20 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden appearance-none"
+                                        />
+                                    </div>
+                                    <div className="relative w-32 group">
+                                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400 group-focus-within:text-gray-800 dark:group-focus-within:text-white transition-colors">
+                                            <Clock size={16} />
+                                        </div>
+                                        <input
+                                            type="time"
+                                            value={editedTime}
+                                            onChange={(e) => setEditedTime(e.target.value)}
+                                            className="w-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-white/20 dark:focus:bg-black/20 backdrop-blur-md rounded-2xl py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-800 dark:text-white outline-none border border-transparent focus:border-white/20 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden appearance-none"
+                                        />
+                                    </div>
                                 </div>
                             </>
                         ) : (

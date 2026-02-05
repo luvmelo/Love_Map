@@ -312,23 +312,27 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
                     </div>
 
                     {/* Date & Time Picker */}
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-3 py-2 rounded-full flex-1">
-                            <Calendar size={14} className="text-gray-400" />
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="relative flex-1 group">
+                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400 group-focus-within:text-gray-800 dark:group-focus-within:text-white transition-colors">
+                                <Calendar size={16} />
+                            </div>
                             <input
                                 type="date"
                                 value={selectedDate}
                                 onChange={(e) => setSelectedDate(e.target.value)}
-                                className="bg-transparent text-xs font-medium text-gray-700 dark:text-gray-300 outline-none flex-1 cursor-pointer"
+                                className="w-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-white/20 dark:focus:bg-black/20 backdrop-blur-md rounded-2xl py-3 pl-10 pr-3 text-sm font-semibold text-gray-800 dark:text-white outline-none border border-transparent focus:border-white/20 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden appearance-none min-h-[46px]"
                             />
                         </div>
-                        <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-3 py-2 rounded-full">
-                            <Clock size={14} className="text-gray-400" />
+                        <div className="relative w-32 group">
+                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400 group-focus-within:text-gray-800 dark:group-focus-within:text-white transition-colors">
+                                <Clock size={16} />
+                            </div>
                             <input
                                 type="time"
                                 value={selectedTime}
                                 onChange={(e) => setSelectedTime(e.target.value)}
-                                className="bg-transparent text-xs font-medium text-gray-700 dark:text-gray-300 outline-none w-16 cursor-pointer"
+                                className="w-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-white/20 dark:focus:bg-black/20 backdrop-blur-md rounded-2xl py-3 pl-10 pr-3 text-sm font-semibold text-gray-800 dark:text-white outline-none border border-transparent focus:border-white/20 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden appearance-none min-h-[46px]"
                             />
                         </div>
                     </div>
