@@ -5,6 +5,8 @@ import { Camera, Heart, Utensils, Plane, Mountain, X, Edit3, Trash2, Calendar, M
 import { Memory, User } from './memory-markers';
 import { USERS } from '../../contexts/user-context';
 import { shareMemory } from '@/lib/share-utils';
+import { TimePicker } from '../ui/time-picker';
+import { DatePicker } from '../ui/date-picker';
 
 const FLAGS = [
     { id: 'love', label: 'Love', icon: Heart, color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', fill: 'fill-pink-500' },
@@ -162,28 +164,16 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
                         {isEditing ? (
                             <>
                                 <div className="flex items-center gap-3 w-full">
-                                    <div className="relative flex-1 group">
-                                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400 group-focus-within:text-gray-800 dark:group-focus-within:text-white transition-colors">
-                                            <Calendar size={16} />
-                                        </div>
-                                        <input
-                                            type="date"
-                                            value={editedDate}
-                                            onChange={(e) => setEditedDate(e.target.value)}
-                                            className="w-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-white/20 dark:focus:bg-black/20 backdrop-blur-md rounded-2xl py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-800 dark:text-white outline-none border border-transparent focus:border-white/20 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden appearance-none"
-                                        />
-                                    </div>
-                                    <div className="relative w-32 group">
-                                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400 group-focus-within:text-gray-800 dark:group-focus-within:text-white transition-colors">
-                                            <Clock size={16} />
-                                        </div>
-                                        <input
-                                            type="time"
-                                            value={editedTime}
-                                            onChange={(e) => setEditedTime(e.target.value)}
-                                            className="w-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-white/20 dark:focus:bg-black/20 backdrop-blur-md rounded-2xl py-2.5 pl-10 pr-3 text-sm font-semibold text-gray-800 dark:text-white outline-none border border-transparent focus:border-white/20 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden appearance-none"
-                                        />
-                                    </div>
+                                    <DatePicker
+                                        value={editedDate}
+                                        onChange={(date) => setEditedDate(date)}
+                                        className="flex-1"
+                                    />
+                                    <TimePicker
+                                        value={editedTime}
+                                        onChange={(time) => setEditedTime(time)}
+                                        className="w-32"
+                                    />
                                 </div>
                             </>
                         ) : (

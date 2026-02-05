@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Camera, Heart, Utensils, Plane, Mountain, X, ImagePlus, Calendar, Clock } from 'lucide-react';
 import { useMapsLibrary, useMap } from '@vis.gl/react-google-maps';
+import { TimePicker } from '../ui/time-picker';
+import { DatePicker } from '../ui/date-picker';
 
 interface AddMemoryModalProps {
     lat: number;
@@ -313,28 +315,16 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
 
                     {/* Date & Time Picker */}
                     <div className="flex items-center gap-3 mb-5">
-                        <div className="relative flex-1 group">
-                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400 group-focus-within:text-gray-800 dark:group-focus-within:text-white transition-colors">
-                                <Calendar size={16} />
-                            </div>
-                            <input
-                                type="date"
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className="w-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-white/20 dark:focus:bg-black/20 backdrop-blur-md rounded-2xl py-3 pl-10 pr-3 text-sm font-semibold text-gray-800 dark:text-white outline-none border border-transparent focus:border-white/20 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden appearance-none min-h-[46px]"
-                            />
-                        </div>
-                        <div className="relative w-32 group">
-                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-500 dark:text-gray-400 group-focus-within:text-gray-800 dark:group-focus-within:text-white transition-colors">
-                                <Clock size={16} />
-                            </div>
-                            <input
-                                type="time"
-                                value={selectedTime}
-                                onChange={(e) => setSelectedTime(e.target.value)}
-                                className="w-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-white/20 dark:focus:bg-black/20 backdrop-blur-md rounded-2xl py-3 pl-10 pr-3 text-sm font-semibold text-gray-800 dark:text-white outline-none border border-transparent focus:border-white/20 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden appearance-none min-h-[46px]"
-                            />
-                        </div>
+                        <DatePicker
+                            value={selectedDate}
+                            onChange={(date) => setSelectedDate(date)}
+                            className="flex-1"
+                        />
+                        <TimePicker
+                            value={selectedTime}
+                            onChange={(time) => setSelectedTime(time)}
+                            className="w-32"
+                        />
                     </div>
 
                     {/* Flag Selector */}

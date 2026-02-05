@@ -23,12 +23,8 @@ import {
 const DEFAULT_CENTER = { lat: 35.6762, lng: 139.6503 }; // Tokyo
 
 // Sample memories with coordinates for demo - with user assignments
-const SAMPLE_MEMORIES: Memory[] = [
-    { id: '1', name: 'Tokyo Tower', type: 'travel', date: '2024-03-14', memo: 'Our first trip together ❤️', lat: 35.6586, lng: 139.7454, addedBy: 'melo' },
-    { id: '2', name: 'Sushi Zen', type: 'food', date: '2024-03-15', memo: 'Best omakase ever!', lat: 35.6595, lng: 139.7292, addedBy: 'may' },
-    { id: '3', name: 'Shibuya Crossing', type: 'adventure', date: '2024-03-16', memo: 'Got lost but found each other', lat: 35.6595, lng: 139.7004, addedBy: 'melo' },
-    { id: '4', name: 'Meiji Shrine', type: 'love', date: '2024-03-17', memo: 'Made a wish together 🙏', lat: 35.6764, lng: 139.6993, addedBy: 'may' },
-];
+// Sample memories empty by default
+const SAMPLE_MEMORIES: Memory[] = [];
 
 // Map boundary restriction to prevent gray areas
 const MAP_RESTRICTION = {
