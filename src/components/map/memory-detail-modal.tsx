@@ -8,6 +8,7 @@ import { shareMemory } from '@/lib/share-utils';
 import { TimePicker } from '../ui/time-picker';
 import { DatePicker } from '../ui/date-picker';
 import { formatDateDisplay } from '@/lib/date-utils';
+import { processImageFile } from '@/lib/image-utils';
 
 const FLAGS = [
     { id: 'love', label: 'Love', icon: Heart, color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', fill: 'fill-pink-500' },
@@ -44,15 +45,22 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
     const Icon = config.icon;
 
     // Handle photo selection
-    const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setEditedPhoto(file);
+        if (!file) return;
+
+        try {
+            const processedFile = await processImageFile(file);
+            setEditedPhoto(processedFile);
+
             const reader = new FileReader();
             reader.onloadend = () => {
                 setEditedPhotoPreview(reader.result as string);
             };
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(processedFile);
+        } catch (err: any) {
+            console.error('Photo processing failed:', err);
+            alert(err.message || 'Could not assign photo');
         }
     };
 
@@ -135,6 +143,12 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
                                 </div>
                             )}
                         </>
+                    )}
+                    {/* HEIC Fallback Label (if preview didn't work effectively) */}
+                    {editedPhotoPreview && editedPhotoPreview.startsWith('data:image/heic') && (
+                        <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded-md backdrop-blur-sm z-20">
+                            <span className="text-[10px] text-white font-medium">HEIC File</span>
+                        </div>
                     )}
                     {/* Close button */}
                     <button
@@ -234,7 +248,7 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
                             </div>
                         ) : (
                             <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4">
-                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
                                     {memory.memo}
                                 </p>
                             </div>

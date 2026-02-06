@@ -5,6 +5,7 @@ import { Camera, Heart, Utensils, Plane, Mountain, X, ImagePlus, Calendar, Clock
 import { useMapsLibrary, useMap } from '@vis.gl/react-google-maps';
 import { TimePicker } from '../ui/time-picker';
 import { DatePicker } from '../ui/date-picker';
+import { processImageFile } from '@/lib/image-utils';
 
 interface AddMemoryModalProps {
     lat: number;
@@ -50,42 +51,13 @@ export function AddMemoryModal({ lat, lng, placeName, placeId, onClose, onSave }
 
         const processedFiles: File[] = [];
 
-        // Dynamic import to avoid SSR issues with heic2any
-        const heic2any = (await import('heic2any')).default;
-
         for (const file of rawFiles) {
-            const isHeic = file.type === 'image/heic' ||
-                file.type === 'image/heif' ||
-                file.name.toLowerCase().endsWith('.heic') ||
-                file.name.toLowerCase().endsWith('.heif');
-
-            if (isHeic) {
-                try {
-                    console.log('Converting HEIC file:', file.name);
-                    // heic2any returns a Blob or Blob[]
-                    const convertedBlob = await heic2any({
-                        blob: file,
-                        toType: 'image/jpeg',
-                        quality: 0.8
-                    });
-
-                    const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-
-                    const newFile = new File(
-                        [blob],
-                        file.name.replace(/\.(heic|heif)$/i, '.jpg'),
-                        { type: 'image/jpeg' }
-                    );
-                    processedFiles.push(newFile);
-                    console.log('Conversion successful:', newFile.name);
-                } catch (err) {
-                    console.error('HEIC conversion failed for', file.name, err);
-                    alert(`Could not convert image ${file.name}. Please try a standard JPEG/PNG.`);
-                    // Do NOT fall back to original HEIC as it will likely fail RLS upload policy
-                    // processedFiles.push(file); 
-                }
-            } else {
-                processedFiles.push(file);
+            try {
+                const processed = await processImageFile(file);
+                processedFiles.push(processed);
+            } catch (err: any) {
+                console.error('File processing error:', file.name, err);
+                alert(err.message || `Could not process image ${file.name}`);
             }
         }
 

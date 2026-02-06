@@ -191,8 +191,9 @@ export async function uploadCoverPhoto(file: File, memoryId: string): Promise<st
         return null;
     }
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${memoryId}.${fileExt}`;
+    // Sanitize filename to avoid issues with special characters
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+    const fileName = `${memoryId}_${sanitizedName}`;
     const filePath = `covers/${fileName}`;
 
     console.log(`Uploading cover photo: ${filePath}, Type: ${file.type}, Size: ${file.size}`);
@@ -200,8 +201,8 @@ export async function uploadCoverPhoto(file: File, memoryId: string): Promise<st
     const { error: uploadError } = await supabase.storage
         .from('memory-photos')
         .upload(filePath, file, {
-            upsert: true,
-            contentType: file.type // Explicitly set content type to avoid sniffing errors
+            upsert: false, // Changed to false to rely solely on INSERT policy
+            contentType: file.type
         });
 
     if (uploadError) {
@@ -222,9 +223,11 @@ export async function uploadPhotos(files: File[], memoryId: string): Promise<str
     }
 
     const uploadPromises = files.map(async (file, index) => {
+        // Sanitize filename
         const fileExt = file.name.split('.').pop();
         const timestamp = Date.now();
-        const fileName = `${memoryId}_${index}_${timestamp}.${fileExt}`;
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const fileName = `${memoryId}_${index}_${timestamp}_${sanitizedName}`;
         const filePath = `photos/${fileName}`;
 
         console.log(`Uploading photo ${index}: ${filePath}, Type: ${file.type}, Size: ${file.size}`);
@@ -232,7 +235,7 @@ export async function uploadPhotos(files: File[], memoryId: string): Promise<str
         const { error: uploadError } = await supabase!.storage
             .from('memory-photos')
             .upload(filePath, file, {
-                upsert: true,
+                upsert: false,
                 contentType: file.type // Explicitly set content type
             });
 
@@ -326,7 +329,7 @@ export async function addReaction(memoryId: string, emoji: string, userId: UserI
         .from('reactions')
         .upsert(
             { memory_id: memoryId, emoji, user_id: userId },
-            { onConflict: 'memory_id,user_id' }
+            { onConflict: 'memory_id,user_id,emoji', ignoreDuplicates: true }
         );
 
     if (error) {
