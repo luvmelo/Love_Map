@@ -206,33 +206,42 @@ export function MemorySidebar({
                     </div>
 
                     {/* Segmented Control */}
-                    <div className="bg-black/5 dark:bg-white/10 p-1 rounded-xl flex relative">
+                    <div className="bg-black/5 dark:bg-white/10 p-1 rounded-full flex relative overflow-hidden backdrop-blur-sm border border-white/10 shadow-inner">
                         {/* Sliding Indicator */}
                         <motion.div
-                            className="absolute bg-white dark:bg-gray-800 rounded-lg shadow-sm"
+                            className="absolute bg-white dark:bg-gray-800 rounded-full shadow-md"
                             initial={false}
                             animate={{
                                 x: activeTab === 'memories' ? 0 : '100%',
-                                width: '50%'
                             }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            style={{ top: 4, bottom: 4, left: 4 }}
+                            // Use width: 50% minus padding for perfect fit
+                            style={{
+                                width: 'calc(50% - 4px)',
+                                top: 4,
+                                bottom: 4,
+                                left: 4,
+                            }}
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
                         />
 
                         <button
                             onClick={() => setActiveTab('memories')}
-                            className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-1.5 text-xs font-medium transition-colors min-w-0 ${activeTab === 'memories' ? 'text-black dark:text-white' : 'text-gray-500'
+                            className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-all duration-300 rounded-full ${activeTab === 'memories'
+                                ? 'text-black dark:text-white'
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                                 }`}
                         >
-                            <List size={14} className="shrink-0" />
+                            <List size={16} className={`transition-transform duration-300 ${activeTab === 'memories' ? 'scale-110' : 'scale-100'}`} />
                             <span className="truncate">Memories</span>
                         </button>
                         <button
                             onClick={() => setActiveTab('stats')}
-                            className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-1.5 text-xs font-medium transition-colors min-w-0 ${activeTab === 'stats' ? 'text-black dark:text-white' : 'text-gray-500'
+                            className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-all duration-300 rounded-full ${activeTab === 'stats'
+                                ? 'text-black dark:text-white'
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                                 }`}
                         >
-                            <BarChart3 size={14} className="shrink-0" />
+                            <BarChart3 size={16} className={`transition-transform duration-300 ${activeTab === 'stats' ? 'scale-110' : 'scale-100'}`} />
                             <span className="truncate">Stats</span>
                         </button>
                     </div>
