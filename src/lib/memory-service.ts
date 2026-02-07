@@ -13,7 +13,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<{ countr
         }
 
         const response = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&result_type=locality|country`
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&result_type=locality|country&language=en`
         );
 
         if (!response.ok) {

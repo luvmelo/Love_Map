@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Heart, Utensils, Plane, Mountain, X, Calendar, MapPin, Filter, ChevronRight, Users, TrendingUp, Camera, Globe, BarChart3, List } from 'lucide-react';
+import { Heart, Utensils, Plane, Mountain, X, Calendar, MapPin, Filter, ChevronRight, Users, TrendingUp, Camera, Globe, BarChart3, List, ChevronDown, ChevronUp } from 'lucide-react';
 import { DatePicker } from '../ui/date-picker';
 import { formatDateDisplay } from '@/lib/date-utils';
 import { Memory, User } from '../map/memory-markers';
 import { USERS } from '../../contexts/user-context';
 import { motion, AnimatePresence } from 'framer-motion';
+import { normalizeLocation } from '@/lib/location-normalization';
 
 const FLAG_CONFIG = {
     love: { icon: Heart, color: 'text-pink-500', bg: 'bg-pink-500/10', label: 'Love' },
@@ -42,6 +43,11 @@ export function MemorySidebar({
 }: MemorySidebarProps) {
     const [activeTypeFilter, setActiveTypeFilter] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'memories' | 'stats'>('memories');
+    // State for collapsible stats sections
+    const [expandedStats, setExpandedStats] = useState<{ countries: boolean; cities: boolean }>({
+        countries: true,
+        cities: false
+    });
 
     // Apply both type and user filters for the LIST view
     const filteredMemories = useMemo(() => memories.filter(m => {
@@ -60,12 +66,23 @@ export function MemorySidebar({
         }, {} as Record<string, number>);
 
         const byCountry = memories.reduce((acc, m) => {
-            if (m.country) acc[m.country] = (acc[m.country] || 0) + 1;
+            if (m.country) {
+                const countryName = normalizeLocation(m.country, 'country');
+                acc[countryName] = (acc[countryName] || 0) + 1;
+            }
             return acc;
         }, {} as Record<string, number>);
 
+        // Ensure we have some data even if fields are missing (for demo)
+        // If real data has no 'country' property, this will be empty.
+        // Let's assume the memory object has these fields or we might need to update the type.
+        // Checking Memory type... it has `country` and `city` optional fields.
+
         const byCity = memories.reduce((acc, m) => {
-            if (m.city) acc[m.city] = (acc[m.city] || 0) + 1;
+            if (m.city) {
+                const cityName = normalizeLocation(m.city, 'city');
+                acc[cityName] = (acc[cityName] || 0) + 1;
+            }
             return acc;
         }, {} as Record<string, number>);
 
@@ -84,6 +101,15 @@ export function MemorySidebar({
         const topCountry = Object.entries(byCountry).sort((a, b) => b[1] - a[1])[0];
         const favoriteType = Object.entries(byType).sort((a, b) => b[1] - a[1])[0];
 
+        // Prepare sorted lists for display
+        const countriesList = Object.entries(byCountry)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ name, count }));
+
+        const citiesList = Object.entries(byCity)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ name, count }));
+
         return {
             total: memories.length,
             byType,
@@ -95,8 +121,28 @@ export function MemorySidebar({
             favoriteType,
             countriesCount: Object.keys(byCountry).length,
             citiesCount: Object.keys(byCity).length,
+            countriesList,
+            citiesList
         };
     }, [memories]);
+
+    const toggleSection = (section: 'countries' | 'cities') => {
+        setExpandedStats(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }));
+    };
+
+    const handleLocationClick = (type: 'country' | 'city', name: string) => {
+        // Find the first memory that matches this location
+        const memory = memories.find(m =>
+            type === 'country' ? m.country === name : m.city === name
+        );
+
+        if (memory && onMemoryClick) {
+            onMemoryClick(memory);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -141,19 +187,19 @@ export function MemorySidebar({
 
                         <button
                             onClick={() => setActiveTab('memories')}
-                            className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-1.5 text-xs font-medium transition-colors ${activeTab === 'memories' ? 'text-black dark:text-white' : 'text-gray-500'
+                            className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-1.5 text-xs font-medium transition-colors min-w-0 ${activeTab === 'memories' ? 'text-black dark:text-white' : 'text-gray-500'
                                 }`}
                         >
-                            <List size={14} />
-                            Memories
+                            <List size={14} className="shrink-0" />
+                            <span className="truncate">Memories</span>
                         </button>
                         <button
                             onClick={() => setActiveTab('stats')}
-                            className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-1.5 text-xs font-medium transition-colors ${activeTab === 'stats' ? 'text-black dark:text-white' : 'text-gray-500'
+                            className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-1.5 text-xs font-medium transition-colors min-w-0 ${activeTab === 'stats' ? 'text-black dark:text-white' : 'text-gray-500'
                                 }`}
                         >
-                            <BarChart3 size={14} />
-                            Stats
+                            <BarChart3 size={14} className="shrink-0" />
+                            <span className="truncate">Stats</span>
                         </button>
                     </div>
                 </div>
@@ -318,17 +364,83 @@ export function MemorySidebar({
 
                                         {/* Grid Stats */}
                                         <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center transition-colors hover:bg-black/10 dark:hover:bg-white/10">
+                                            <div
+                                                onClick={() => toggleSection('countries')}
+                                                className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center transition-colors hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer"
+                                            >
                                                 <Globe size={20} className="mx-auto mb-1.5 text-gray-500 dark:text-gray-400" />
                                                 <div className="text-xl font-bold text-gray-800 dark:text-white">{stats.countriesCount}</div>
-                                                <div className="text-[10px] text-gray-500 uppercase font-medium">Countries</div>
+                                                <div className="text-[10px] text-gray-500 uppercase font-medium flex items-center justify-center gap-1">
+                                                    Countries
+                                                    {expandedStats.countries ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                                </div>
                                             </div>
-                                            <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center transition-colors hover:bg-black/10 dark:hover:bg-white/10">
+                                            <div
+                                                onClick={() => toggleSection('cities')}
+                                                className="bg-black/5 dark:bg-white/5 rounded-xl p-3 text-center transition-colors hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer"
+                                            >
                                                 <MapPin size={20} className="mx-auto mb-1.5 text-gray-500 dark:text-gray-400" />
                                                 <div className="text-xl font-bold text-gray-800 dark:text-white">{stats.citiesCount}</div>
-                                                <div className="text-[10px] text-gray-500 uppercase font-medium">Cities</div>
+                                                <div className="text-[10px] text-gray-500 uppercase font-medium flex items-center justify-center gap-1">
+                                                    Cities
+                                                    {expandedStats.cities ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                                </div>
                                             </div>
                                         </div>
+
+                                        {/* Countries List */}
+                                        {expandedStats.countries && stats.countriesList.length > 0 && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="bg-black/5 dark:bg-white/5 rounded-xl p-3 overflow-hidden"
+                                            >
+                                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 pl-1">Countries</h3>
+                                                <div className="space-y-1 max-h-40 overflow-y-auto scrollbar-thin pr-1">
+                                                    {stats.countriesList.map((item) => (
+                                                        <div
+                                                            key={item.name}
+                                                            onClick={() => handleLocationClick('country', item.name)}
+                                                            className="flex justify-between items-center text-xs py-1 px-2 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer group"
+                                                        >
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <MapPin size={10} className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                <span className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-[120px]">{item.name}</span>
+                                                            </div>
+                                                            <span className="bg-white/20 dark:bg-black/20 px-1.5 py-0.5 rounded text-[10px] text-gray-500">{item.count}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+
+                                        {/* Cities List */}
+                                        {expandedStats.cities && stats.citiesList.length > 0 && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="bg-black/5 dark:bg-white/5 rounded-xl p-3 overflow-hidden"
+                                            >
+                                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 pl-1">Cities</h3>
+                                                <div className="space-y-1 max-h-40 overflow-y-auto scrollbar-thin pr-1">
+                                                    {stats.citiesList.map((item) => (
+                                                        <div
+                                                            key={item.name}
+                                                            onClick={() => handleLocationClick('city', item.name)}
+                                                            className="flex justify-between items-center text-xs py-1 px-2 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer group"
+                                                        >
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <MapPin size={10} className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                <span className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-[120px]">{item.name}</span>
+                                                            </div>
+                                                            <span className="bg-white/20 dark:bg-black/20 px-1.5 py-0.5 rounded text-[10px] text-gray-500">{item.count}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
 
                                         {/* Type Breakdown */}
                                         <div>

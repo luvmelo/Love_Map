@@ -374,7 +374,11 @@ export default function LoveMap() {
                 memories={memories}
                 userFilter={userFilter}
                 onUserFilterChange={setUserFilter}
-                onMemoryClick={(memory) => setSelectedMemory(memory)}
+                onMemoryClick={(memory) => {
+                    // Trigger fly-to animation which will open the modal on completion
+                    setFlyToTarget({ lat: memory.lat, lng: memory.lng, memory });
+                    // Optionally close sidebar on mobile, but keep open for now as per desktop-first design
+                }}
             />
 
             {/* Anniversary Banner */}
