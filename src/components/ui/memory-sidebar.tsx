@@ -31,6 +31,7 @@ interface MemorySidebarProps {
     userFilter: User | null;
     onUserFilterChange: (user: User | null) => void;
     onMemoryClick?: (memory: Memory) => void;
+    onLocationClick?: (bounds: { north: number; south: number; east: number; west: number }) => void;
 }
 
 export function MemorySidebar({
@@ -39,7 +40,8 @@ export function MemorySidebar({
     memories,
     userFilter,
     onUserFilterChange,
-    onMemoryClick
+    onMemoryClick,
+    onLocationClick
 }: MemorySidebarProps) {
     const [activeTypeFilter, setActiveTypeFilter] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'memories' | 'stats'>('memories');
@@ -134,13 +136,45 @@ export function MemorySidebar({
     };
 
     const handleLocationClick = (type: 'country' | 'city', name: string) => {
-        // Find the first memory that matches this location
-        const memory = memories.find(m =>
-            type === 'country' ? m.country === name : m.city === name
-        );
+        if (!onLocationClick) return;
 
-        if (memory && onMemoryClick) {
-            onMemoryClick(memory);
+        // Filter memories that match this location (using normalization)
+        const locationMemories = memories.filter(m => {
+            if (type === 'country') {
+                return normalizeLocation(m.country || '', 'country') === name;
+            } else {
+                return normalizeLocation(m.city || '', 'city') === name;
+            }
+        });
+
+        if (locationMemories.length === 0) return;
+
+        // Calculate bounds
+        let north = -90;
+        let south = 90;
+        let east = -180;
+        let west = 180;
+
+        locationMemories.forEach(m => {
+            if (m.lat > north) north = m.lat;
+            if (m.lat < south) south = m.lat;
+            if (m.lng > east) east = m.lng;
+            if (m.lng < west) west = m.lng;
+        });
+
+        // Just verify if we have a single point
+        if (north === south && east === west) {
+            // It's a single point
+            // Let's create a small buffer around it (e.g. 0.01 deg ~= 1km)
+            const padding = 0.01;
+            onLocationClick({
+                north: north + padding,
+                south: south - padding,
+                east: east + padding,
+                west: west - padding
+            });
+        } else {
+            onLocationClick({ north, south, east, west });
         }
     };
 

@@ -200,9 +200,10 @@ function MapControls({
 }
 
 // Component to handle fly-to animations from gallery
+// Component to handle fly-to animations from gallery
 interface MapFlyToHandlerProps {
-    flyToTarget: { lat: number; lng: number; memory: Memory } | null;
-    onAnimationComplete: (memory: Memory) => void;
+    flyToTarget: { lat?: number; lng?: number; bounds?: google.maps.LatLngBoundsLiteral; memory?: Memory; zoom?: number } | null;
+    onAnimationComplete: (memory?: Memory) => void;
     onClear: () => void;
 }
 
@@ -212,7 +213,27 @@ function MapFlyToHandler({ flyToTarget, onAnimationComplete, onClear }: MapFlyTo
     useEffect(() => {
         if (!flyToTarget || !map) return;
 
-        const targetZoom = 16;
+        // If bounds provided, use fitBounds (simpler animation handled by Google Maps)
+        if (flyToTarget.bounds) {
+            map.fitBounds(flyToTarget.bounds, {
+                top: 50,
+                bottom: 50,
+                left: 50,
+                right: 350 // Account for sidebar
+            });
+
+            // Wait for partial animation then complete
+            setTimeout(() => {
+                onAnimationComplete(flyToTarget.memory);
+                onClear();
+            }, 1000);
+            return;
+        }
+
+        // Existing smooth animation for point targets
+        if (flyToTarget.lat === undefined || flyToTarget.lng === undefined) return;
+
+        const targetZoom = flyToTarget.zoom || 16;
         const currentZoom = map.getZoom() || 3;
         const zoomDiff = targetZoom - currentZoom;
         const steps = Math.max(1, Math.abs(Math.round(zoomDiff)));
@@ -234,7 +255,7 @@ function MapFlyToHandler({ flyToTarget, onAnimationComplete, onClear }: MapFlyTo
             if (currentStep < steps) {
                 setTimeout(animateZoom, stepDelay);
             } else {
-                // Animation complete, open the detail modal
+                // Animation complete, open the detail modal if memory exists
                 setTimeout(() => {
                     onAnimationComplete(flyToTarget.memory);
                     onClear();
@@ -262,7 +283,7 @@ export default function LoveMap() {
     const [userFilter, setUserFilter] = useState<User | null>(null);
     const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number; memory: Memory } | null>(null);
+    const [flyToTarget, setFlyToTarget] = useState<{ lat?: number; lng?: number; bounds?: google.maps.LatLngBoundsLiteral; memory?: Memory; zoom?: number } | null>(null);
     const [pendingMemoryDetail, setPendingMemoryDetail] = useState<Memory | null>(null);
     const [isAnniversaryDismissed, setIsAnniversaryDismissed] = useState(false);
 
@@ -359,7 +380,7 @@ export default function LoveMap() {
                 {/* Fly-to handler for gallery navigation */}
                 <MapFlyToHandler
                     flyToTarget={flyToTarget}
-                    onAnimationComplete={(memory) => setSelectedMemory(memory)}
+                    onAnimationComplete={(memory) => setSelectedMemory(memory || null)}
                     onClear={() => setFlyToTarget(null)}
                 />
             </Map>
@@ -378,6 +399,10 @@ export default function LoveMap() {
                     // Trigger fly-to animation which will open the modal on completion
                     setFlyToTarget({ lat: memory.lat, lng: memory.lng, memory });
                     // Optionally close sidebar on mobile, but keep open for now as per desktop-first design
+                }}
+                onLocationClick={(bounds) => {
+                    // Trigger fitBounds
+                    setFlyToTarget({ bounds });
                 }}
             />
 
