@@ -50,9 +50,11 @@ export async function processImageFile(file: File): Promise<File> {
         return newFile;
 
     } catch (libErr: any) {
-        console.error('❌ heic2any conversion failed:', libErr);
-        // If it's a specific "libheif" error, it might be the WASM loading.
-        throw new Error(`Could not convert HEIC image: ${file.name}. (Error: ${libErr.message || 'Unknown conversion error'})`);
+        console.warn('❌ heic2any conversion failed, using original file:', libErr);
+        // Fallback: Return the original file. 
+        // This allows the upload to proceed. The image will work on iOS/Safari/Mac,
+        // even if it might not display on Chrome/Windows.
+        return file;
     }
 }
 

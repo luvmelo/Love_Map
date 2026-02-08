@@ -8,6 +8,7 @@ import { Memory, User } from '../map/memory-markers';
 import { USERS } from '../../contexts/user-context';
 import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeLocation } from '@/lib/location-normalization';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const FLAG_CONFIG = {
     love: { icon: Heart, color: 'text-pink-500', bg: 'bg-pink-500/10', label: 'Love' },
@@ -50,6 +51,7 @@ export function MemorySidebar({
         countries: true,
         cities: false
     });
+    const isMobile = useIsMobile();
 
     // Apply both type and user filters for the LIST view
     const filteredMemories = useMemo(() => memories.filter(m => {
