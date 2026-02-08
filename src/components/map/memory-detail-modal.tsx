@@ -36,6 +36,7 @@ interface MemoryDetailModalProps {
 }
 
 export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDelete, onReaction }: MemoryDetailModalProps) {
+    const isMobile = useIsMobile();
     const [isEditing, setIsEditing] = useState(false);
     const [editedMemo, setEditedMemo] = useState(memory.memo);
     const [editedType, setEditedType] = useState(memory.type);
