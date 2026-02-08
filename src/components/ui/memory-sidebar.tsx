@@ -335,7 +335,10 @@ export function MemorySidebar({
                                             return (
                                                 <button
                                                     key={memory.id}
-                                                    onClick={() => onMemoryClick?.(memory)}
+                                                    onClick={() => {
+                                                        onMemoryClick?.(memory);
+                                                        if (isMobile) onClose();
+                                                    }}
                                                     className="w-full text-left p-3 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all group"
                                                 >
                                                     <div className="flex items-start gap-3">

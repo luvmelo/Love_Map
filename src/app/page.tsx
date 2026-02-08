@@ -2,7 +2,7 @@ import LoveMap from "@/components/map/love-map";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col">
+    <main className="flex h-[100dvh] flex-col overflow-hidden">
       <LoveMap />
     </main>
   );
