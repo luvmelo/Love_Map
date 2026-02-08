@@ -183,9 +183,9 @@ export function MemorySidebar({
     if (!isOpen) return null;
 
     return (
-        <div className="absolute top-0 left-0 bottom-0 w-full sm:w-80 z-30 flex flex-col pointer-events-none">
+        <div className="absolute top-0 left-0 bottom-0 w-full sm:w-80 z-30 flex flex-col pointer-events-none p-3 sm:p-0">
             {/* Sidebar Container - enable pointer events for contents */}
-            <div className="glass-card h-full m-0 sm:m-4 sm:mr-0 flex flex-col overflow-hidden animate-slide-up pointer-events-auto shadow-2xl rounded-none sm:rounded-2xl border-l-0 sm:border-l border-y-0 sm:border-y border-transparent sm:border-white/20">
+            <div className="glass-card h-full flex flex-col overflow-hidden animate-slide-up pointer-events-auto shadow-2xl rounded-2xl sm:m-4 sm:mr-0 border border-white/20">
 
                 {/* Header */}
                 <div className="p-5 border-b border-white/10 shrink-0">
