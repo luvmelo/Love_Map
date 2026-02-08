@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { X, MapPin, ChevronLeft, ChevronRight, Trash2, Check, Camera, Filter, User, Globe, Calendar } from 'lucide-react';
 import { Memory, User as UserType } from '../map/memory-markers';
 import { USERS } from '../../contexts/user-context';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface GalleryViewProps {
     memories: Memory[];
