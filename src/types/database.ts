@@ -94,6 +94,7 @@ CREATE TABLE memories (
     name TEXT NOT NULL,
     type TEXT NOT NULL CHECK (type IN ('love', 'food', 'travel', 'adventure')),
     date DATE DEFAULT CURRENT_DATE,
+    time TEXT,
     memo TEXT DEFAULT '',
     lat DOUBLE PRECISION NOT NULL,
     lng DOUBLE PRECISION NOT NULL,

@@ -147,6 +147,12 @@ export async function createMemory(memory: MemoryInsert): Promise<Memory | null>
 
 // Update an existing memory
 export async function updateMemory(id: string, updates: MemoryUpdate): Promise<Memory | null> {
+    // If it's a local memory, don't try to update on server
+    if (id.startsWith('local-')) {
+        console.log('ℹ️ Skipping server update for local memory');
+        return null;
+    }
+
     if (!isSupabaseConfigured() || !supabase) {
         console.warn('Supabase not configured, cannot update memory');
         return null;
@@ -160,7 +166,7 @@ export async function updateMemory(id: string, updates: MemoryUpdate): Promise<M
         .single();
 
     if (error) {
-        console.error('Error updating memory:', error);
+        console.error('Error updating memory:', error.message, error.details || '', error.hint || '');
         return null;
     }
 
@@ -169,6 +175,12 @@ export async function updateMemory(id: string, updates: MemoryUpdate): Promise<M
 
 // Delete a memory
 export async function deleteMemory(id: string): Promise<boolean> {
+    // If it's a local memory, just return false (handled locally by caller fallback usually, 
+    // but honestly caller should handle local delete if this returns false)
+    if (id.startsWith('local-')) {
+        return false;
+    }
+
     if (!isSupabaseConfigured() || !supabase) {
         console.warn('Supabase not configured, cannot delete memory');
         return false;

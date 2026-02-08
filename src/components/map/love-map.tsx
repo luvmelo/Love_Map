@@ -1,6 +1,6 @@
 'use client';
 
-import { Map, MapMouseEvent, useMap } from '@vis.gl/react-google-maps';
+import { Map, useMap, InfoWindow, MapMouseEvent } from '@vis.gl/react-google-maps';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SearchBox } from './search-box';
 import { AddMemoryModal } from './add-memory-modal';
@@ -433,6 +433,7 @@ export default function LoveMap() {
                                 name: data.locationName || tempMarker.name || 'Unknown Location',
                                 type: data.type,
                                 date: data.date,
+                                time: data.time,
                                 memo: data.memo,
                                 lat: tempMarker.lat,
                                 lng: tempMarker.lng,
@@ -551,6 +552,38 @@ export default function LoveMap() {
                         <span>Tap anywhere to drop a pin 📍</span>
                     </div>
                 </div>
+            )}
+
+            {/* Search Result InfoWindow */}
+            {lastSearchedPlace && lastSearchedPlace.geometry?.location && (
+                <InfoWindow
+                    position={lastSearchedPlace.geometry.location}
+                    onCloseClick={() => setLastSearchedPlace(null)}
+                    headerContent={
+                        <div className="text-sm font-bold text-gray-900 pr-4">
+                            {lastSearchedPlace.name}
+                        </div>
+                    }
+                >
+                    <div className="text-xs text-gray-600 max-w-[200px]">
+                        <p>{lastSearchedPlace.formatted_address}</p>
+                        <button
+                            onClick={() => {
+                                setTempMarker({
+                                    lat: lastSearchedPlace.geometry!.location!.lat(),
+                                    lng: lastSearchedPlace.geometry!.location!.lng(),
+                                    name: lastSearchedPlace.name,
+                                    placeId: lastSearchedPlace.place_id
+                                });
+                                setIsAddMode(true);
+                                setLastSearchedPlace(null);
+                            }}
+                            className="mt-2 w-full px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                        >
+                            Add Memory Here
+                        </button>
+                    </div>
+                </InfoWindow>
             )}
 
             {/* Photo Gallery */}

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Camera, Heart, Utensils, Plane, Mountain, X, Edit3, Trash2, Calendar, MapPin, Check, ImagePlus, Clock, Share2 } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
+import { Camera, Heart, Utensils, Plane, Mountain, X, Edit3, Trash2, Calendar, MapPin, Check, ImagePlus, Clock, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Memory, User } from './memory-markers';
 import { USERS } from '../../contexts/user-context';
 import { shareMemory } from '@/lib/share-utils';
@@ -9,6 +9,7 @@ import { TimePicker } from '../ui/time-picker';
 import { DatePicker } from '../ui/date-picker';
 import { formatDateDisplay } from '@/lib/date-utils';
 import { processImageFile } from '@/lib/image-utils';
+import { motion, AnimatePresence, wrap } from 'framer-motion';
 
 const FLAGS = [
     { id: 'love', label: 'Love', icon: Heart, color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', fill: 'fill-pink-500' },
@@ -18,6 +19,11 @@ const FLAGS = [
 ];
 
 const REACTION_EMOJIS = ['❤️', '😍', '🥰', '✨', '🔥', '💕', '🎉', '😊'];
+
+const swipeConfidenceThreshold = 10000;
+const swipePower = (offset: number, velocity: number) => {
+    return Math.abs(offset) * velocity;
+};
 
 interface MemoryDetailModalProps {
     memory: Memory;
@@ -37,12 +43,36 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
     const [editedPhoto, setEditedPhoto] = useState<File | null>(null);
     const [editedPhotoPreview, setEditedPhotoPreview] = useState<string | null>(memory.coverPhotoUrl || null);
     const [isSharing, setIsSharing] = useState(false);
+
+    // Carousel state
+    const [[page, direction], setPage] = useState([0, 0]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const config = FLAGS.find(f => f.id === memory.type) || FLAGS[0];
     const editingConfig = FLAGS.find(f => f.id === editedType) || FLAGS[0];
     const userInfo = USERS[memory.addedBy];
     const Icon = config.icon;
+
+    // Determine all photos to show
+    const allPhotos = useMemo(() => {
+        const photos = [];
+        // If editing and have new preview, show that
+        if (isEditing && editedPhotoPreview) {
+            photos.push(editedPhotoPreview);
+        }
+        // Otherwise show existing photos
+        else {
+            if (memory.coverPhotoUrl) photos.push(memory.coverPhotoUrl);
+            if (memory.photos && memory.photos.length > 0) photos.push(...memory.photos);
+        }
+        return photos;
+    }, [memory.coverPhotoUrl, memory.photos, isEditing, editedPhotoPreview]);
+
+    const currentPhotoIndex = wrap(0, allPhotos.length, page);
+
+    const paginate = (newDirection: number) => {
+        setPage([page + newDirection, newDirection]);
+    };
 
     // Handle photo selection
     const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,65 +128,106 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
                     className="hidden"
                 />
 
-                {/* Header Photo Area - now shows cover photo if available */}
                 <div
+                    className={`h-64 bg-black relative group overflow-hidden ${isEditing ? 'cursor-pointer' : ''}`}
                     onClick={isEditing ? () => fileInputRef.current?.click() : undefined}
-                    className={`h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-neutral-800 dark:to-neutral-900 flex items-center justify-center relative overflow-hidden ${isEditing ? 'cursor-pointer group' : ''}`}
                 >
-                    {/* Show cover photo if available */}
-                    {editedPhotoPreview ? (
-                        <>
-                            <img
-                                src={editedPhotoPreview}
-                                alt="Cover"
-                                className="absolute inset-0 w-full h-full object-cover"
-                            />
-                            {isEditing && (
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <div className="text-white text-center">
-                                        <ImagePlus size={24} className="mx-auto mb-1" />
-                                        <span className="text-xs font-medium">Change Photo</span>
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            {/* Abstract pattern background */}
-                            <div className="absolute inset-0 opacity-30">
-                                <div
-                                    className="absolute inset-0"
-                                    style={{
-                                        background: `radial-gradient(circle at 30% 70%, ${config.color.includes('pink') ? '#ec489940' : config.color.includes('orange') ? '#f9731640' : config.color.includes('blue') ? '#3b82f640' : '#22c55e40'} 0%, transparent 50%)`,
-                                    }}
+                    <AnimatePresence initial={false} mode="popLayout">
+                        {allPhotos.length > 0 ? (
+                            <motion.div
+                                key={currentPhotoIndex}
+                                className="absolute inset-0 flex items-center justify-center bg-black"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2 }}
+                                drag={!isEditing && allPhotos.length > 1 ? "x" : false}
+                                dragConstraints={{ left: 0, right: 0 }}
+                                dragElastic={0.2}
+                                onDragEnd={(e, { offset, velocity }) => {
+                                    const swipe = swipePower(offset.x, velocity.x);
+                                    if (swipe < -swipeConfidenceThreshold) {
+                                        paginate(1);
+                                    } else if (swipe > swipeConfidenceThreshold) {
+                                        paginate(-1);
+                                    }
+                                }}
+                            >
+                                <img
+                                    src={allPhotos[currentPhotoIndex]}
+                                    alt={`Photo ${currentPhotoIndex + 1}`}
+                                    className="w-full h-full object-contain"
+                                    draggable="false"
                                 />
-                            </div>
-                            {/* Category Icon or Add Photo prompt */}
-                            {isEditing ? (
-                                <div className="relative z-10 text-gray-400 text-center group-hover:scale-110 transition-transform">
-                                    <Camera size={32} className="mx-auto" />
-                                    <span className="text-xs mt-1 block">Add Cover Photo</span>
+                            </motion.div>
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center relative">
+                                {/* Abstract pattern background */}
+                                <div className="absolute inset-0 opacity-30">
+                                    <div
+                                        className="absolute inset-0"
+                                        style={{
+                                            background: `radial-gradient(circle at 30% 70%, ${config.color.includes('pink') ? '#ec489940' : config.color.includes('orange') ? '#f9731640' : config.color.includes('blue') ? '#3b82f640' : '#22c55e40'} 0%, transparent 50%)`,
+                                        }}
+                                    />
                                 </div>
-                            ) : (
                                 <div className={`w-16 h-16 rounded-2xl ${config.bg} border flex items-center justify-center ${config.color} relative z-10`}>
                                     <Icon size={32} className="fill-current" />
                                 </div>
-                            )}
-                        </>
-                    )}
-                    {/* HEIC Fallback Label (if preview didn't work effectively) */}
-                    {editedPhotoPreview && editedPhotoPreview.startsWith('data:image/heic') && (
-                        <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 rounded-md backdrop-blur-sm z-20">
-                            <span className="text-[10px] text-white font-medium">HEIC File</span>
+                            </div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Gradient Overlay for Text Visibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+
+                    {isEditing && (
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20 pointer-events-none">
+                            <div className="text-white text-center">
+                                <ImagePlus size={24} className="mx-auto mb-1" />
+                                <span className="text-xs font-medium">Change Cover</span>
+                            </div>
                         </div>
                     )}
+
+                    {/* Navigation Arrows */}
+                    {!isEditing && allPhotos.length > 1 && (
+                        <>
+                            <button
+                                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white/80 transition-all opacity-0 group-hover:opacity-100 z-20 backdrop-blur-sm"
+                                onClick={(e) => { e.stopPropagation(); paginate(-1); }}
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+                            <button
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white/80 transition-all opacity-0 group-hover:opacity-100 z-20 backdrop-blur-sm"
+                                onClick={(e) => { e.stopPropagation(); paginate(1); }}
+                            >
+                                <ChevronRight size={20} />
+                            </button>
+                        </>
+                    )}
+
+                    {/* Dots Indicator */}
+                    {!isEditing && allPhotos.length > 1 && (
+                        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-20">
+                            {allPhotos.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={(e) => { e.stopPropagation(); setPage([idx, idx > currentPhotoIndex ? 1 : -1]); }}
+                                    className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/40 hover:bg-white/60'}`}
+                                />
+                            ))}
+                        </div>
+                    )}
+
                     {/* Close button */}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
                             onClose();
                         }}
-                        className="absolute top-3 right-3 p-2 rounded-full glass hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors z-20"
+                        className="absolute top-3 right-3 p-2 rounded-full glass hover:bg-black/5 dark:hover:bg-white/10 text-white transition-colors z-30"
                     >
                         <X size={18} />
                     </button>
