@@ -23,6 +23,7 @@ export interface Memory {
     coverPhotoUrl?: string;
     photos?: string[];  // Array of photo URLs for multi-image support
     reactions?: { emoji: string; userId: User }[];  // Emoji reactions from users
+    createdAt?: string; // For sorting by "Time Created"
 }
 
 // Pin colors matching your design system

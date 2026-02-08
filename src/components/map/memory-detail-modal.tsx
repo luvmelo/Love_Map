@@ -10,6 +10,7 @@ import { DatePicker } from '../ui/date-picker';
 import { formatDateDisplay } from '@/lib/date-utils';
 import { processImageFile } from '@/lib/image-utils';
 import { motion, AnimatePresence, wrap } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const FLAGS = [
     { id: 'love', label: 'Love', icon: Heart, color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20', fill: 'fill-pink-500' },
@@ -117,7 +118,14 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-            <div className="glass-card w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300 shadow-2xl ring-1 ring-white/20">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                // Mobile: fixed height 85dvh for consistency
+                // Desktop: auto height based on content
+                className={`fixed bottom-0 sm:bottom-auto sm:top-1/2 left-0 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:w-[28rem] bg-white dark:bg-black/90 backdrop-blur-xl rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden border-t sm:border border-white/20 z-50 flex flex-col ${isMobile ? 'h-[85dvh]' : 'max-h-[90dvh]'}`}
+            >
 
                 {/* Hidden file input */}
                 <input
@@ -423,7 +431,7 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
                         )}
                     </div>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </div >
     );
 }

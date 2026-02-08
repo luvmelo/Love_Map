@@ -46,6 +46,9 @@ export function MemorySidebar({
 }: MemorySidebarProps) {
     const [activeTypeFilter, setActiveTypeFilter] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'memories' | 'stats'>('memories');
+    // Sorting state
+    const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'created-desc' | 'location'>('date-desc');
+
     // State for collapsible stats sections
     const [expandedStats, setExpandedStats] = useState<{ countries: boolean; cities: boolean }>({
         countries: true,
@@ -54,11 +57,34 @@ export function MemorySidebar({
     const isMobile = useIsMobile();
 
     // Apply both type and user filters for the LIST view
-    const filteredMemories = useMemo(() => memories.filter(m => {
-        const matchesType = !activeTypeFilter || m.type === activeTypeFilter;
-        const matchesUser = !userFilter || m.addedBy === userFilter;
-        return matchesType && matchesUser;
-    }), [memories, activeTypeFilter, userFilter]);
+    const filteredMemories = useMemo(() => {
+        let result = memories.filter(m => {
+            const matchesType = !activeTypeFilter || m.type === activeTypeFilter;
+            const matchesUser = !userFilter || m.addedBy === userFilter;
+            return matchesType && matchesUser;
+        });
+
+        // Apply sorting
+        return result.sort((a, b) => {
+            switch (sortBy) {
+                case 'date-desc':
+                    return new Date(b.date).getTime() - new Date(a.date).getTime();
+                case 'date-asc':
+                    return new Date(a.date).getTime() - new Date(b.date).getTime();
+                case 'created-desc':
+                    // Fallback to date if createdAt missing
+                    const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    return tB - tA;
+                case 'location':
+                    const locA = (a.country || '') + (a.city || '') + a.name;
+                    const locB = (b.country || '') + (b.city || '') + b.name;
+                    return locA.localeCompare(locB);
+                default:
+                    return 0;
+            }
+        });
+    }, [memories, activeTypeFilter, userFilter, sortBy]);
 
     // Calculate statistics for the STATS view (using ALL memories to show full history)
     const stats = useMemo(() => {
@@ -262,10 +288,25 @@ export function MemorySidebar({
                                 className="absolute inset-0 flex flex-col"
                             >
                                 {/* FILTERS & LIST (Existing Layout) */}
-                                <div className="px-5 py-3 border-b border-white/10 shrink-0">
-                                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                                        <Users size={12} />
-                                        <span>Filter by person</span>
+                                <div className="px-5 py-3 border-b border-white/10 shrink-0 space-y-3">
+                                    {/* Link to sort/filter controls */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <Users size={12} />
+                                            <span>Filter by person</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={sortBy}
+                                                onChange={(e) => setSortBy(e.target.value as any)}
+                                                className="bg-black/5 dark:bg-white/5 text-xs rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-pink-500/50 border-none text-gray-700 dark:text-gray-300"
+                                            >
+                                                <option value="date-desc">Newest Date</option>
+                                                <option value="date-asc">Oldest Date</option>
+                                                <option value="created-desc">Created (Newest)</option>
+                                                <option value="location">Location (A-Z)</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="flex gap-2">
                                         <button
