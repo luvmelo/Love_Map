@@ -318,7 +318,7 @@ export function MemoryDetailModal({ memory, currentUser, onClose, onSave, onDele
                                 />
                             </div>
                         ) : (
-                            <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4">
+                            <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4 h-32 overflow-y-auto scrollbar-thin">
                                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm whitespace-pre-wrap">
                                     {memory.memo}
                                 </p>
