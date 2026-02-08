@@ -168,8 +168,8 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
                                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${showFilters || hasActiveFilters
-                                        ? 'bg-blue-500/10 text-blue-500'
-                                        : 'hover:bg-black/10 dark:hover:bg-white/10 text-gray-500'
+                                    ? 'bg-blue-500/10 text-blue-500'
+                                    : 'hover:bg-black/10 dark:hover:bg-white/10 text-gray-500'
                                     }`}
                             >
                                 <Filter size={16} />
@@ -230,8 +230,8 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
                                         key={user}
                                         onClick={() => setPersonFilter(personFilter === user ? null : user)}
                                         className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-colors ${personFilter === user
-                                                ? 'ring-1 ring-current'
-                                                : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400'
+                                            ? 'ring-1 ring-current'
+                                            : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400'
                                             }`}
                                         style={personFilter === user ? { background: USERS[user].color + '20', color: USERS[user].color } : {}}
                                     >
@@ -257,8 +257,8 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
                                             key={country}
                                             onClick={() => setCountryFilter(countryFilter === country ? null : country)}
                                             className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${countryFilter === country
-                                                    ? 'bg-blue-500 text-white'
-                                                    : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-black/30'
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-black/30'
                                                 }`}
                                         >
                                             {country}
@@ -283,8 +283,8 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
                                             key={year}
                                             onClick={() => setYearFilter(yearFilter === year ? null : year)}
                                             className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${yearFilter === year
-                                                    ? 'bg-green-500 text-white'
-                                                    : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-black/30'
+                                                ? 'bg-green-500 text-white'
+                                                : 'bg-white/50 dark:bg-black/20 text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-black/30'
                                                 }`}
                                         >
                                             {year}
@@ -351,12 +351,12 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
 
                                             {/* Hover overlay (only when not in select mode) */}
                                             {!isSelectMode && (
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
                                             )}
 
                                             {/* Location and user info on hover */}
                                             {!isSelectMode && (
-                                                <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                                                     <div className="flex items-center gap-1.5">
                                                         <div
                                                             className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0"

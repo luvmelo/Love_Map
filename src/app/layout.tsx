@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 import { MapProvider } from "@/components/providers/map-provider";
 import { UserProvider } from "@/contexts/user-context";
+import { LoveLock } from "@/components/ui/love-lock";
 
 export default function RootLayout({
   children,
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <MapProvider>
           <UserProvider>
+            <LoveLock />
             {children}
           </UserProvider>
         </MapProvider>
