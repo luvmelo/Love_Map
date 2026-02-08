@@ -114,7 +114,7 @@ function MapControls({
     }, [map, smoothZoomTo]);
 
     return (
-        <div className="absolute bottom-10 left-0 right-0 flex justify-center z-10">
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center z-10 pb-[env(safe-area-inset-bottom)]">
             <div className="glass h-16 px-5 rounded-2xl flex items-center gap-4 shadow-2xl">
                 {/* Sidebar Toggle */}
                 <button

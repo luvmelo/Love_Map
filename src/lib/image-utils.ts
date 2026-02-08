@@ -1,4 +1,4 @@
-import heic2any from 'heic2any';
+
 
 /**
  * Processes an image file, converting HEIC/HEIF to JPEG if necessary.
@@ -30,10 +30,8 @@ export async function processImageFile(file: File): Promise<File> {
     // 3. Strategy B: heic2any Library (WASM)
     try {
         console.log('Loading heic2any for conversion...');
-        // Note: heic2any is imported at top, or we can dynamic import if needed to save bundle size, 
-        // but this is a utility file so top-level is fine or dynamic inside if strict.
-        // Let's stick to dynamic if we want to mimic previous behavior, but here clean import is easier.
-        // Actually, heic2any might fail on 10-bit images (ERR_LIBHEIF).
+        // Dynamic import to avoid SSR issues and ensure client-side execution
+        const heic2any = (await import('heic2any')).default;
 
         const convertedBlob = await heic2any({
             blob: file,
@@ -52,11 +50,9 @@ export async function processImageFile(file: File): Promise<File> {
         return newFile;
 
     } catch (libErr: any) {
-        console.warn('❌ heic2any conversion failed, falling back to original file:', libErr);
-        // Fallback: Return the original file. 
-        // Logic: Better to upload the implementation (RLS now allows it) than to fail completely.
-        // The user might not see it in Chrome, but data is safe.
-        return file;
+        console.error('❌ heic2any conversion failed:', libErr);
+        // If it's a specific "libheif" error, it might be the WASM loading.
+        throw new Error(`Could not convert HEIC image: ${file.name}. (Error: ${libErr.message || 'Unknown conversion error'})`);
     }
 }
 

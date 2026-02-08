@@ -152,7 +152,7 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
             />
 
             {/* Gallery Dialog Panel */}
-            <div className="fixed inset-x-4 top-[10%] bottom-[10%] md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[90vw] md:max-w-4xl z-50 animate-slide-up">
+            <div className="fixed inset-4 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[90vw] md:max-w-4xl z-50 animate-slide-up">
                 <div className="glass-card h-full flex flex-col overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
@@ -320,7 +320,7 @@ export function GalleryView({ memories, isOpen, onClose, onNavigateToMemory, onD
                             </div>
                         ) : (
                             /* Photo Grid */
-                            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                 {allPhotos.map((photo, index) => {
                                     const key = `${photo.memory.id}-${photo.url}`;
                                     const isSelected = selectedPhotos.has(key);
